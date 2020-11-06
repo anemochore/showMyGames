@@ -14,18 +14,18 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
 4. www.humblebundle.com
 
 ## history
-// ver 0.1 @ 2020-10-13
-//    first version.
-// ver 0.2 @ 2020-10-18
-//    no more uses api.
-// ver 0.3 @ 2020-10-27
-//    await/async refactoring
-// ver 0.4 @ 2020-10-27
-//    now searches app id by name in steam on indiegala
-// ver 0.5 @ 2020-11-1
-//    searches app id by name in steam if needed!
-// ver 0.6 @ 2020-11-7
-//    css decoupling and first open public
+    // ver 0.1 @ 2020-10-13
+    //    first version.
+    // ver 0.2 @ 2020-10-18
+    //    no more uses api.
+    // ver 0.3 @ 2020-10-27
+    //    await/async refactoring
+    // ver 0.4 @ 2020-10-27
+    //    now searches app id by name in steam on indiegala
+    // ver 0.5 @ 2020-11-1
+    //    searches app id by name in steam if needed!
+    // ver 0.6 @ 2020-11-7
+    //    css decoupling and first open public
 
 ## todo (too many)
 1. main on 2
