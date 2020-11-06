@@ -16,16 +16,15 @@
 
 .fy-container-ignored {
   opacity: 0.3;
-  background-color: #ff4f4f;
+  background-color: #ff4f4f !important;
 }
 
-
 .fy-bg-owned {
-  background-color: #00ce67;
+  background-color: #00ce67 !important;
 }
 
 .fy-bg-wished {
-  background-color: #0491bf;
+  background-color: #0491bf !important;
 }
 
 
