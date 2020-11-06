@@ -1,7 +1,7 @@
 .fy-container {
   opacity: 1;
   background-image: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 10%, rgba(0, 0, 0, 0) 100%);
-  box-shadow: rgba(255, 255, 255, 0.1) 0px 0px 1px 1px inset;
+  box-shadow: rgba(255, 255, 255, 0.1) 0 0 1px 1px inset;
 }
 
 .fy-container-bg-inversed {
@@ -11,7 +11,7 @@
 .fy-container-followed {
   opacity: 1;
   background-color: cyan;
-  box-shadow: cyan 0px 0px 2px 4px inset;
+  box-shadow: cyan 0 0 2px 4px inset;
 }
 
 .fy-container-ignored {
