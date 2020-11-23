@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.6.1
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -37,6 +37,8 @@
 //    searches app id by name in steam if needed!
 // ver 0.6 @ 2020-11-7
 //    css decoupling and first open public
+// ver 0.6.1 @ 2020-11-23
+//    indiegala bug fix
 
 
 (async () => {
@@ -55,7 +57,7 @@
   let relDivs = [];
   let relAppIds = [], relGameLinks = [];
 
-  let inverseBackground = false, styleModsString = null;  //additional style fixes (use hostname without www and domain)
+  let inverseBackground = false, styleModsString = '';  //additional style fixes (use hostname without www and domain. ex: indiegala)
   let titles = [], title = '';
 
 
@@ -138,8 +140,6 @@
         pageGameLinks = [...document.querySelectorAll('div.bundle-slider-game-info-pub-dev>a')];
         pageAppIds = pageGameLinks.map(el => parseInt(el.pathname.replace(/\/$/, '').split('/').pop()));
         pageDivs = [...document.querySelector('div.bundle-page-tier-games>div.row').children];
-
-        styleModsString = {};
       }
       else if(document.location.pathname.startsWith('/store/game/')) {
         //app page
@@ -473,7 +473,7 @@
       let divs = [divOrdivs];
       if(Array.isArray(divOrdivs)) divs = divOrdivs;
 
-      if(styleModsString) {
+      if(styleModsString != '') {
         divs.forEach(div => {
           div.classList.add('fy-mods-'+styleModsString);
         });
