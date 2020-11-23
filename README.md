@@ -26,9 +26,11 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    searches app id by name in steam if needed!
     // ver 0.6 @ 2020-11-7
     //    css decoupling and first open public
+    // ver 0.7.0 @ 2020-11-23
+    //    now supports indiegala main
 
 ## todo (too many)
-1. main on 2
+~~1. main on 2~~ (done on 0.7.0)
 2. genres, etc list on 3
 3. pagination on list on 2,4,3
 4. related games on app page on 4

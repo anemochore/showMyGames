@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.7.0
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -37,6 +37,10 @@
 //    searches app id by name in steam if needed!
 // ver 0.6 @ 2020-11-7
 //    css decoupling and first open public
+// ver 0.6.1 @ 2020-11-23
+//    indiegala bug fix
+// ver 0.7.0 @ 2020-11-23
+//    now supports indiegala main
 
 
 (async () => {
@@ -55,7 +59,7 @@
   let relDivs = [];
   let relAppIds = [], relGameLinks = [];
 
-  let inverseBackground = false, styleModsString = null;  //additional style fixes (use hostname without www and domain)
+  let inverseBackground = false, styleModsString = '';  //additional style fixes (use hostname without www and domain. ex: indiegala)
   let titles = [], title = '';
 
 
@@ -127,8 +131,9 @@
 
       if(document.location.pathname == '/') {
         //main
-        //todo1: make it async+++
-        pageDivs = [...document.querySelectorAll('div#big-list-store>div.list-cont>div.item-cont, section#homepage-more-games>div.more-games-body>div.main-list-items-cont>div.main-list-result-set>div.main-list-item-col')]
+        await elementReady('div.load-more-contents>a[style=""]');
+
+        pageDivs = [...document.querySelectorAll('div#big-list-store>div.list-cont>div.item-cont, section#homepage-more-games div.main-list-item-col div.main-list-item')]
         .filter(el => el.querySelector('span>i.fa-steam'));
         pageGameLinks = pageDivs.map(el => el.querySelector('a').pathname.split('_')[0]);
         pageAppIds = pageGameLinks.map(el => parseInt(el.replace(/\/$/, '').split('/').pop()));
@@ -138,8 +143,6 @@
         pageGameLinks = [...document.querySelectorAll('div.bundle-slider-game-info-pub-dev>a')];
         pageAppIds = pageGameLinks.map(el => parseInt(el.pathname.replace(/\/$/, '').split('/').pop()));
         pageDivs = [...document.querySelector('div.bundle-page-tier-games>div.row').children];
-
-        styleModsString = {};
       }
       else if(document.location.pathname.startsWith('/store/game/')) {
         //app page
@@ -473,7 +476,7 @@
       let divs = [divOrdivs];
       if(Array.isArray(divOrdivs)) divs = divOrdivs;
 
-      if(styleModsString) {
+      if(styleModsString != '') {
         divs.forEach(div => {
           div.classList.add('fy-mods-'+styleModsString);
         });
@@ -704,7 +707,7 @@
     this.log = (txt = '') => {
       txt = txt.trim();
       if(txt.length == 0) {
-        this.div.style.transition = '5s';
+        this.div.style.transition = '2.5s';
         this.div.style.opacity = 0;
       }
       else {
