@@ -30,7 +30,7 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    now supports indiegala main
 
 ## todo (too many)
-~~1. main on 2~~ (done on 0.7.0)
+1. ~~main on 2~~ (done on 0.7.0)
 2. genres, etc list on 3
 3. pagination on list on 2,4,3
 4. related games on app page on 4
