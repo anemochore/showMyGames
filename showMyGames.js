@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.0
+// @version      0.7.1
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -41,6 +41,8 @@
 //    indiegala bug fix
 // ver 0.7.0 @ 2020-11-23
 //    now supports indiegala main
+// ver 0.7.1 @ 2020-12-5
+//    added supports for fanatical 'mix' bundle pages
 
 
 (async () => {
@@ -555,7 +557,26 @@
   async function fanaticalonMenuLoadingDone_() {
     pageDivs = [], pageAppIds = [], pageGameLinks = [];
 
-    if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle'))) {
+    if(document.location.pathname.split('/').length > 3 && document.location.pathname.split('/')[2] == 'game') {
+      //app page (including star deal page)
+      await elementReady('div.game-details>dl.row div a');
+      pageGameLinks = [...document.querySelectorAll('div.game-details>dl.row div a')]
+      .filter(el => el.host == "store.steampowered.com")
+      .map(el => el.href);
+      if(pageGameLinks.length > 0) {
+        pageAppIds = [parseInt(pageGameLinks[0].replace(/\/$/, '').split('/').pop())];
+        pageDivs = [document.querySelector('h1')];
+      }
+
+      //'you may also like' section
+      //todo6: click click click...+++
+      //relGameLinks = [...document.querySelectorAll('div.slick-list div.card-container a.w-100')];
+      //if(relGameLinks.length> console.log(relGameLinks);
+
+      syncMenu.update(true, 'ready');
+      preEntry();
+    }
+    else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
       await elementReady('div.carousel-buttons-container>div>button+button');
       pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-game-card, div[class*="-column-row"]>a>button.bundle-game-card')]
@@ -590,25 +611,6 @@
         subtree: true,
       });
       nextButton.click();
-    }
-    else if(document.location.pathname.split('/').length > 3 && document.location.pathname.split('/')[2] == 'game') {
-      //app page (including star deal page)
-      await elementReady('div.game-details>dl.row div a');
-      pageGameLinks = [...document.querySelectorAll('div.game-details>dl.row div a')]
-      .filter(el => el.host == "store.steampowered.com")
-      .map(el => el.href);
-      if(pageGameLinks.length > 0) {
-        pageAppIds = [parseInt(pageGameLinks[0].replace(/\/$/, '').split('/').pop())];
-        pageDivs = [document.querySelector('h1')];
-      }
-
-      //'you may also like' section
-      //todo6: click click click...+++
-      //relGameLinks = [...document.querySelectorAll('div.slick-list div.card-container a.w-100')];
-      //if(relGameLinks.length> console.log(relGameLinks);
-
-      syncMenu.update(true, 'ready');
-      preEntry();
     }
     //todo7: genres, top-sellers, etc...
     else {
