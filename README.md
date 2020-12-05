@@ -28,6 +28,8 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    css decoupling and first open public
     // ver 0.7.0 @ 2020-11-23
     //    now supports indiegala main
+    // ver 0.7.1 @ 2020-12-5
+    //    added supports for fanatical 'mix' bundle pages
 
 ## todo (too many)
 1. ~~main on 2~~ (done on 0.7.0)
