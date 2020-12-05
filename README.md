@@ -30,6 +30,8 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    now supports indiegala main
     // ver 0.7.1 @ 2020-12-5
     //    added supports for fanatical 'mix' bundle pages
+    // ver 0.7.2 @ 2020-12-5
+    //    fixed a bug that shows wrong order on fanatical bundle pages
 
 ## todo (too many)
 1. ~~main on 2~~ (done on 0.7.0)

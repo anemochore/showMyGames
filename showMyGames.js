@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.1
+// @version      0.7.2
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -43,6 +43,8 @@
 //    now supports indiegala main
 // ver 0.7.1 @ 2020-12-5
 //    added supports for fanatical 'mix' bundle pages
+// ver 0.7.2 @ 2020-12-5
+//    fixed a bug that shows wrong order on fanatical bundle pages
 
 
 (async () => {
@@ -468,6 +470,7 @@
     //ignored package is not supported. idk if it's being used at all.
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
+    console.info(pageAppIds);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -587,6 +590,7 @@
 
       let nextButton = document.querySelector('div.carousel-buttons-container>div>button+button');
       let target = document.querySelector('div#carousel-content');
+      let titles = {};
       pageGameLinks = [target.querySelector('a.d-none') && target.querySelector('a.d-none').href];
 
       let observer = new MutationObserver(mutations => {
@@ -598,8 +602,14 @@
           if('scrollRestoration' in history) history.scrollRestoration = 'manual';
           window.scrollTo(0, 0);
 
-          pageAppIds = pageGameLinks
-          .filter(el => el).map(el => el && parseInt(el.replace(/\/$/, '').split('/').pop()));
+          //detail에서 스팀 링크가 없는 경우가 있어서...
+          pageGameLinks.forEach((el, idx) => {
+            if(!el)
+              pageDivs[idx] = null;
+            else
+              pageAppIds[idx] = parseInt(el.replace(/\/$/, '').split('/').pop());
+          });
+
           syncMenu.update(true, 'ready');
           preEntry();
         }
@@ -611,6 +621,9 @@
         subtree: true,
       });
       nextButton.click();
+
+      //todo8: Other products you may like?
+      //...
     }
     //todo7: genres, top-sellers, etc...
     else {
