@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.2
+// @version      0.7.3
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -45,6 +45,8 @@
 //    added supports for fanatical 'mix' bundle pages
 // ver 0.7.2 @ 2020-12-5
 //    fixed a bug that shows wrong order on fanatical bundle pages
+// ver 0.7.3 @ 2020-12-7
+//    added supports for fanatical main page
 
 
 (async () => {
@@ -189,7 +191,6 @@
           Object.entries(titlesDict).forEach(([k, v]) => {
             titles[pageGameLinks.indexOf(k)] = v;
           });
-          syncMenu.update(false, 'busy');
           searchSteam(titles, appIdsDict => {
             titles.forEach((title, index) => {
               pageAppIds[index] = appIdsDict[title];
@@ -203,7 +204,6 @@
         pageDivs = [document.querySelector('div.title')];
         if(pageDivs.length > 0) {
           title = document.querySelector('div.title').innerText;
-          syncMenu.update(false, 'busy');
           searchSteam([title], appIdsDict => {
             pageAppIds = [appIdsDict[title]];
             preEntry();
@@ -250,7 +250,6 @@
         pageDivs = [...document.querySelectorAll('div.dd-image-box, div.content-choice')]
         .filter(el => el.querySelector('i.hb-steam'));
         titles = pageDivs.map(el => el.querySelector('span.front-page-art-image-text, span.content-choice-title').textContent.trim());
-        syncMenu.update(false, 'busy');
         searchSteam(titles, appIdsDict => {
           titles.forEach((title, index) => {
             pageAppIds[index] = appIdsDict[title];
@@ -269,7 +268,6 @@
         inverseBackground = true;
         pageDivs = [...document.querySelectorAll('div.entity')].filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
         titles = pageDivs.map(el => el.querySelector('span.entity-title').textContent.trim());
-        syncMenu.update(false, 'busy');
         searchSteam(titles, appIdsDict => {
           titles.forEach((title, index) => {
             pageAppIds[index] = appIdsDict[title];
@@ -284,7 +282,6 @@
         if(pageDivs) {
           title = pageDivs.textContent.trim();
           pageDivs = [pageDivs];
-          syncMenu.update(false, 'busy');
           searchSteam([title], appIdsDict => {
             pageAppIds = [appIdsDict[title]];
 
@@ -624,6 +621,24 @@
 
       //todo8: Other products you may like?
       //...
+    }
+    else if(document.location.pathname.split('/').pop() == '') {
+      //main
+      //await elementReady('div.carousel-buttons-container>div>button+button');  //todo
+
+      const commonCardSel = 'div.card-container>div.video-hit-card>div.card-content';
+      pageDivs = [...document.querySelectorAll('div.container>div.row>' +commonCardSel)]  //Top Sellers & More Great Deals
+      .concat(    ...document.querySelectorAll('div.container>div.pb-5 '+commonCardSel))  //New Releases and ...
+      .concat(    ...document.querySelectorAll('div.container>div.trending-deals-two-row-carousel '+commonCardSel))  //Trending Deals
+      .filter(el => el.querySelector('div.icons-price-container>div.drm-container-steam') && el.querySelector('div.icons-price-container div.card-os-icons>span'));
+
+      let titles = pageDivs.map(el => el.querySelector('div.product-name-container>a').innerText.trim());
+      searchSteam(titles, appIdsDict => {
+        titles.forEach((title, index) => {
+          pageAppIds[index] = appIdsDict[title];
+        });
+        preEntry();
+      });
     }
     //todo7: genres, top-sellers, etc...
     else {

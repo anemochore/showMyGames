@@ -32,6 +32,8 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    added supports for fanatical 'mix' bundle pages
     // ver 0.7.2 @ 2020-12-5
     //    fixed a bug that shows wrong order on fanatical bundle pages
+    // ver 0.7.3 @ 2020-12-7
+    //    added supports for fanatical main page
 
 ## todo (too many)
 1. ~~main on 2~~ (done on 0.7.0)
