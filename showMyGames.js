@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.4
+// @version      0.7.5
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -49,6 +49,9 @@
 //    added supports for fanatical main page
 // ver 0.7.4 @ 2020-12-9
 //    fixed an error on fanatical
+// ver 0.7.5 @ 2020-12-9
+//    fixed an error on fanatical main page
+//    now supports letest-deals page on fanatical
 
 
 (async () => {
@@ -306,14 +309,13 @@
       return;
 
     if(pageAppIds.length == 0) {
-      toast.log('no steam game links found on this page.');
+      toast.log('no steam game links found on this page or not supported page.');
       toast.log();
       syncMenu.update(true, 'ready');
       return;
     }
     else {
       toast.log(pageAppIds.length+' links are found. checking user game lists are available...');
-      //console.info(pageAppIds);  //dev
       entry();
     }
   }
@@ -368,6 +370,8 @@
       idForTitleCache = {};
       GM_setValue('ID_FOR_TITLE_CACHE', idForTitleCache);
     }
+
+    console.info(titles);  //dev
     titles.forEach((title, i) => {
       if(idForTitleCache[title]) {
         localCount++;
@@ -624,12 +628,17 @@
       //todo8: Other products you may like?
       //...
     }
-    else if(document.location.pathname.split('/').pop() == '') {
-      //main
-      //await elementReady('div.carousel-buttons-container>div>button+button');  //todo
+    else if(document.location.pathname.split('/').pop() == '' || document.location.pathname.split('/')[2] == 'latest-deals') {
+      //main or latest-deals
+      if(document.location.pathname.split('/').pop() == '')
+        //main
+        await elementReady('a.btn-all-deals');
+      else if(document.location.pathname.split('/')[2] == 'latest-deals')
+        //latest-deals
+        await elementReady('nav.algoliaPaginate');
 
       const commonCardSel = 'div.card-container>div.video-hit-card>div.card-content';
-      pageDivs = [...document.querySelectorAll('div.container>div.row>' +commonCardSel)]  //Top Sellers & More Great Deals
+      pageDivs = [...document.querySelectorAll('div.container>div.row>' +commonCardSel)]  //Top Sellers & More Great Deals & latest-deals
       .concat(    ...document.querySelectorAll('div.container>div.pb-5 '+commonCardSel))  //New Releases and ...
       .concat(    ...document.querySelectorAll('div.container>div.trending-deals-two-row-carousel '+commonCardSel))  //Trending Deals
       .filter(el => el.querySelector('div.icons-price-container>div.drm-container-steam') && el.querySelector('div.icons-price-container div.card-os-icons>span'));
@@ -642,8 +651,8 @@
         preEntry();
       });
     }
-    //todo7: genres, top-sellers, etc...
     else {
+      //todo7: genres, top-sellers, etc...
       syncMenu.update(true, 'ready');
       preEntry();
     }

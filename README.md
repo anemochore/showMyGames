@@ -36,6 +36,9 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    added supports for fanatical main page
     // ver 0.7.4 @ 2020-12-9
     //    fixed an error on fanatical
+    // ver 0.7.5 @ 2020-12-9
+    //    fixed an error on fanatical main page
+    //    now supports letest-deals page on fanatical
 
 ## todo (too many)
 1. ~~main on 2~~ (done on 0.7.0)
