@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.3
+// @version      0.7.4
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -47,6 +47,8 @@
 //    fixed a bug that shows wrong order on fanatical bundle pages
 // ver 0.7.3 @ 2020-12-7
 //    added supports for fanatical main page
+// ver 0.7.4 @ 2020-12-9
+//    fixed an error on fanatical
 
 
 (async () => {
@@ -492,7 +494,7 @@
       }
 
       //assuming bundles are not included in a package
-      if(ids.every(id => ownedIds.includes(id)) || ids.every(id => ownedSubIds.includes(id.toString().replace('sub', '')))) {
+      if(ids.every(id => ownedIds.includes(id)) || ids.every(id => id && ownedSubIds.includes(id.toString().replace('sub', '')))) {
         divs.forEach(div => {
           div.classList.add('fy-container');
           if(inverseBackground) div.classList.add('fy-container-bg-inversed');
