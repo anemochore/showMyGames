@@ -5,7 +5,8 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
 1. scrapes user data from https://store.steampowered.com/dynamicstore/userdata/ and stores in browser ([location](https://stackoverflow.com/questions/16823686/where-does-gm-setvalue-store-data)). so steam login is required.
 2. if a page has steam links, determines and marks if games on page are followed and/or owned or wishlisted or ignored.
 3. if a page has no steam links, scrapes info from steam search page. so it's not perfect.
-4. not like app, bundle and package is partially supported due to there's no api or doc whatsoever.
+4. scraped info is stored in browser too.
+5. not like app, bundle and package is partially supported due to there's no api or doc whatsoever.
 
 ## supported sites
 1. www.dailyindiegame.com
@@ -43,8 +44,10 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    now supports promo page on humble
     // ver 0.7.7 @ 2020-12-15
     //    now supports top-sellers page on fanatical
+    //    fixed an stopping error on indiegala main page
 
 ## todo (too many)
+0. refactoring to use steam search on 2
 1. ~~main on 2~~ (done on 0.7.0)
 2. pagination on list on 2
 3. pagination on list on 4

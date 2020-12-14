@@ -56,6 +56,7 @@
 //    now supports promo page on humble
 // ver 0.7.7 @ 2020-12-15
 //    now supports top-sellers page on fanatical
+//    fixed an stopping error on indiegala main page
 
 
 (async () => {
@@ -147,12 +148,20 @@
 
       if(document.location.pathname == '/') {
         //main
-        await elementReady('div.load-more-contents>a[style=""]');
+        //await elementReady('div.load-more-contents>a[style=""]');  //deprecated!
 
-        pageDivs = [...document.querySelectorAll('div#big-list-store>div.list-cont>div.item-cont, section#homepage-more-games div.main-list-item-col div.main-list-item')]
-        .filter(el => el.querySelector('span>i.fa-steam'));
-        pageGameLinks = pageDivs.map(el => el.querySelector('a').pathname.split('_')[0]);
-        pageAppIds = pageGameLinks.map(el => parseInt(el.replace(/\/$/, '').split('/').pop()));
+        //sadly impossible to tell the numbers are appid or subid.
+        //todo0: refactor to steam search
+
+        isAsync = true;
+        $(document).ajaxStop(() => {
+          pageDivs = [...document.querySelectorAll('div#big-list-store>div.list-cont>div.item-cont, section[class^="homepage"] div.main-list-item-col div.main-list-item')]
+          .filter(el => el.querySelector('span>i.fa-steam'));
+          pageGameLinks = pageDivs.map(el => el.querySelector('a').pathname.split('_')[0]);
+          pageAppIds = pageGameLinks.map(el => parseInt(el.replace(/\/$/, '').split('/').pop()));
+
+          preEntry();
+        });
       }
       else if(document.location.pathname.startsWith('/bundle/')) {
         //bundle page
