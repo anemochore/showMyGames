@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.5
+// @version      0.7.6
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -51,7 +51,9 @@
 //    fixed an error on fanatical
 // ver 0.7.5 @ 2020-12-9
 //    fixed an error on fanatical main page
-//    now supports letest-deals page on fanatical
+//    now supports latest-deals page on fanatical
+// ver 0.7.6 @ 2020-12-14
+//    now supports promo page on humble
 
 
 (async () => {
@@ -76,6 +78,7 @@
 
   //parsing current page
   toast.log('analyzing current page...');
+  let isAsync = false;
   switch(document.location.host) {
     case "dailyindiegame.com":
     case "www.dailyindiegame.com":
@@ -196,6 +199,8 @@
           Object.entries(titlesDict).forEach(([k, v]) => {
             titles[pageGameLinks.indexOf(k)] = v;
           });
+
+          isAsync = true;
           searchSteam(titles, appIdsDict => {
             titles.forEach((title, index) => {
               pageAppIds[index] = appIdsDict[title];
@@ -209,6 +214,8 @@
         pageDivs = [document.querySelector('div.title')];
         if(pageDivs.length > 0) {
           title = document.querySelector('div.title').innerText;
+
+          isAsync = true;
           searchSteam([title], appIdsDict => {
             pageAppIds = [appIdsDict[title]];
             preEntry();
@@ -235,7 +242,7 @@
       //todo? pass+++
 
       window.onurlchange = fanaticalonMenuLoadingDone_;
-      syncMenu.update(false, 'busy');
+      isAsync = true;
       fanaticalonMenuLoadingDone_();
       break;
     case "humblebundle.com":
@@ -255,6 +262,8 @@
         pageDivs = [...document.querySelectorAll('div.dd-image-box, div.content-choice')]
         .filter(el => el.querySelector('i.hb-steam'));
         titles = pageDivs.map(el => el.querySelector('span.front-page-art-image-text, span.content-choice-title').textContent.trim());
+
+        isAsync = true;
         searchSteam(titles, appIdsDict => {
           titles.forEach((title, index) => {
             pageAppIds[index] = appIdsDict[title];
@@ -263,22 +272,23 @@
           preEntry();
         });
       }
-      else if(document.location.pathname == '/store' || document.location.pathname == '/store/search' || document.location.pathname.startsWith('/store/search/')) {
-        //store main or search page
+      else if(document.location.pathname == '/store' || document.location.pathname == '/store/search' || document.location.pathname.startsWith('/store/search/') || document.location.pathname.startsWith('/store/promo/')) {
+        //store main or search or promo page
         //'featured' section is not supported
-
-        await elementReady('div.js-pagination a.js-grid-last');
         //todo3: 페이지 이동 어쩔+++
 
-        inverseBackground = true;
-        pageDivs = [...document.querySelectorAll('div.entity')].filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
-        titles = pageDivs.map(el => el.querySelector('span.entity-title').textContent.trim());
-        searchSteam(titles, appIdsDict => {
-          titles.forEach((title, index) => {
-            pageAppIds[index] = appIdsDict[title];
+        isAsync = true;
+        $(document).ajaxStop(() => {  //elementReady is not usable. so i had to depend on jquery...
+          inverseBackground = true;
+          pageDivs = [...document.querySelectorAll('div.entity')].filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
+          titles = pageDivs.map(el => el.querySelector('span.entity-title').textContent.trim());
+          searchSteam(titles, appIdsDict => {
+            titles.forEach((title, index) => {
+              pageAppIds[index] = appIdsDict[title];
+            });
+            pageDivs = pageDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]);
+            preEntry();
           });
-          pageDivs = pageDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]);
-          preEntry();
         });
       }
       else if(document.location.pathname.startsWith('/store/')) {
@@ -287,6 +297,8 @@
         if(pageDivs) {
           title = pageDivs.textContent.trim();
           pageDivs = [pageDivs];
+
+          isAsync = true;
           searchSteam([title], appIdsDict => {
             pageAppIds = [appIdsDict[title]];
 
@@ -301,12 +313,11 @@
     default:
       //todo999: add other sites
   }
-  preEntry();
+  preEntry(isAsync);
 
 
-  function preEntry() {
-    if(syncMenu.getStatus() == 'busy')
-      return;
+  function preEntry(isAsync = false) {
+    if(isAsync) return;
 
     if(pageAppIds.length == 0) {
       toast.log('no steam game links found on this page or not supported page.');
@@ -377,7 +388,7 @@
         localCount++;
         appIds[title] = idForTitleCache[title];
 
-        console.info('['+title+'] found on cache:',localCount,'/',count,'done...');  //dev
+        console.info('<'+title+'> found on cache:',localCount,'/',count,'done...');  //dev
         if(localCount == count)
           preCallback_();
       }
