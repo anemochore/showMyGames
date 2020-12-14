@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.6
+// @version      0.7.7
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -54,6 +54,8 @@
 //    now supports latest-deals page on fanatical
 // ver 0.7.6 @ 2020-12-14
 //    now supports promo page on humble
+// ver 0.7.7 @ 2020-12-15
+//    now supports top-sellers page on fanatical
 
 
 (async () => {
@@ -72,7 +74,7 @@
   let relDivs = [];
   let relAppIds = [], relGameLinks = [];
 
-  let inverseBackground = false, styleModsString = '';  //additional style fixes (use hostname without www and domain. ex: indiegala)
+  let inverseBackground = false, styleModsString = '';  //additional style fixes
   let titles = [], title = '';
 
 
@@ -286,6 +288,7 @@
             titles.forEach((title, index) => {
               pageAppIds[index] = appIdsDict[title];
             });
+
             pageDivs = pageDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]);
             preEntry();
           });
@@ -382,7 +385,7 @@
       GM_setValue('ID_FOR_TITLE_CACHE', idForTitleCache);
     }
 
-    console.info(titles);  //dev
+    console.info('titles', titles);  //dev
     titles.forEach((title, i) => {
       if(idForTitleCache[title]) {
         localCount++;
@@ -484,7 +487,7 @@
     //ignored package is not supported. idk if it's being used at all.
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
-    console.info(pageAppIds);  //dev
+    console.info('pageAppIds', pageAppIds);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -590,7 +593,6 @@
       //relGameLinks = [...document.querySelectorAll('div.slick-list div.card-container a.w-100')];
       //if(relGameLinks.length> console.log(relGameLinks);
 
-      syncMenu.update(true, 'ready');
       preEntry();
     }
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
@@ -624,7 +626,6 @@
               pageAppIds[idx] = parseInt(el.replace(/\/$/, '').split('/').pop());
           });
 
-          syncMenu.update(true, 'ready');
           preEntry();
         }
       });
@@ -639,19 +640,20 @@
       //todo8: Other products you may like?
       //...
     }
-    else if(document.location.pathname.split('/').pop() == '' || document.location.pathname.split('/')[2] == 'latest-deals') {
+    else if(document.location.pathname.split('/').pop() == '' || document.location.pathname.split('/')[2] == 'latest-deals' || document.location.pathname.split('/')[2] == 'search') {
       //main or latest-deals
       if(document.location.pathname.split('/').pop() == '')
-        //main
         await elementReady('a.btn-all-deals');
       else if(document.location.pathname.split('/')[2] == 'latest-deals')
-        //latest-deals
-        await elementReady('nav.algoliaPaginate');
+        await elementReady('ul.pagination>li>a.page-item');
+      else if(document.location.pathname.split('/')[2] == 'search')
+        await elementReady('ul.ais-Pagination__root>li.ais-Pagination__item>a.Pagination__itemLink');
 
       const commonCardSel = 'div.card-container>div.video-hit-card>div.card-content';
       pageDivs = [...document.querySelectorAll('div.container>div.row>' +commonCardSel)]  //Top Sellers & More Great Deals & latest-deals
       .concat(    ...document.querySelectorAll('div.container>div.pb-5 '+commonCardSel))  //New Releases and ...
       .concat(    ...document.querySelectorAll('div.container>div.trending-deals-two-row-carousel '+commonCardSel))  //Trending Deals
+      .concat(    ...document.querySelectorAll('div.container div.ais-Hits__root '+commonCardSel))  //search
       .filter(el => el.querySelector('div.icons-price-container>div.drm-container-steam') && el.querySelector('div.icons-price-container div.card-os-icons>span'));
 
       let titles = pageDivs.map(el => el.querySelector('div.product-name-container>a').innerText.trim());
@@ -662,10 +664,30 @@
         preEntry();
       });
     }
+    else if(document.location.pathname.split('/')[2] == 'top-sellers') {
+      //top-sellers page
+      //'load more' is not supported!
+      await elementReady('div.ts-item a');
+
+      pageDivs = [...document.querySelectorAll('div.ts-item')]
+      .filter(el => el.querySelector('a').href.includes('/game/'))  //excludes bundles
+      .filter(el => el.querySelector('div.icons-container>div.drm-container-steam') && el.querySelector('div.icons-container div.card-os-icons>span'));
+
+      let titles = pageDivs.map(el => el.querySelector('div.ts-title>a').innerText.trim());
+      searchSteam(titles, appIdsDict => {
+        titles.forEach((title, index) => {
+          pageAppIds[index] = appIdsDict[title];
+        });
+
+        pageDivs = pageDivs.map(el => el.querySelector('div.card-overlay'));
+        inverseBackground = true;
+        styleModsString = 'fanatical-top_sellers';
+        preEntry();
+      });
+    }
     else {
-      //todo7: genres, top-sellers, etc...
-      syncMenu.update(true, 'ready');
-      preEntry();
+      //todo7: genres,  etc...
+      isAsync = false;
     }
   }
 

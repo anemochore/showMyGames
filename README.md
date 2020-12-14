@@ -41,14 +41,16 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    now supports latest-deals page on fanatical
     // ver 0.7.6 @ 2020-12-14
     //    now supports promo page on humble
+    // ver 0.7.7 @ 2020-12-15
+    //    now supports top-sellers page on fanatical
 
 ## todo (too many)
 1. ~~main on 2~~ (done on 0.7.0)
-2. genres, etc list on 3
-3. pagination on list on 2,4,3
+2. pagination on list on 2
+3. pagination on list on 4
 4. related games on app page on 4
 5. determine if a package (subId) is wishlisted
 6. related games on app page on 3
-7. genres, top-sellers, etc... list on 3
+7. genres, top-sellers, etc... list on 3 (partially done on 0.7.7)
 
 999. support other sites. any suggestion?
