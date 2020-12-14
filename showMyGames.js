@@ -424,7 +424,7 @@
               if(type == 'app') {
                 appIds[key] = parseInt(id);
                 idForTitleCache[key] = parseInt(id);
-                toast.log('added ['+key+'] to title cache.');
+                toast.log('added <'+key+'> to title cache.');
               }
               else if(type == 'bundle') {
                 let items = JSON.parse(a.getAttribute('data-ds-bundle-data')).m_rgItems.map(el => el.m_rgIncludedAppIDs);
@@ -438,14 +438,14 @@
 
                 appIds[key] = items.slice();
                 idForTitleCache[key] = appIds[key];
-                toast.log('added ['+key+'] to title cache.');
+                toast.log('added <'+key+'> to title cache.');
               }
               else if(type == 'sub') {
                 //todo5: 패키지에 속한 애들이 위시리스트에 있는지는 따로 봐야 함.+++
                 //let items = JSON.parse(a.getAttribute('data-ds-appid')).split(',').map(el => parseInt(el));
                 appIds[key] = 'sub' + id;
                 idForTitleCache[key] = appIds[key];
-                toast.log('added ['+key+'] to title cache.');
+                toast.log('added <'+key+'> to title cache.');
               }
               else {
                 console.error('unsupported url:', res.finalUrl);
@@ -454,7 +454,7 @@
             }
             localCount++;
 
-            console.info('['+title+'] searched:',localCount,'/',count,'done...');  //dev
+            console.info('<'+title+'> searched:',localCount,'/',count,'done...');  //dev
             if(localCount == count)
               preCallback_();
           }
@@ -488,6 +488,7 @@
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
     console.info('pageAppIds', pageAppIds);  //dev
+    console.info('pageDivs', pageDivs);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -599,7 +600,7 @@
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
       await elementReady('div.carousel-buttons-container>div>button+button');
-      pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-game-card, div[class*="-column-row"]>a>button.bundle-game-card')]
+      pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-product-card, div[class*="-column-row"]>a>button.bundle-product-card')]
       .filter(el => el.querySelector('div.card-icons-price-container div.drm-container-steam'));
 
       let [start, end] = document.querySelector('div.carousel-buttons-container>div.carousel-count').innerText.split(' of ')
