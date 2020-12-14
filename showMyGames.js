@@ -576,6 +576,7 @@
 
   async function fanaticalonMenuLoadingDone_() {
     pageDivs = [], pageAppIds = [], pageGameLinks = [];
+    inverseBackground = false, styleModsString = '';
 
     if(document.location.pathname.split('/').length > 3 && document.location.pathname.split('/')[2] == 'game') {
       //app page (including star deal page)
