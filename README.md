@@ -45,6 +45,8 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     // ver 0.7.7 @ 2020-12-15
     //    now supports top-sellers page on fanatical
     //    fixed an stopping error on indiegala main page
+    // ver 0.7.8 @ 2020-12-16
+    //    fixed a bug showing incorrect colors on 'GAMES STORE LIST' on dig
 
 ## todo (too many)
 0. refactoring to use steam search on 2

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.7
+// @version      0.7.8
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -57,6 +57,9 @@
 // ver 0.7.7 @ 2020-12-15
 //    now supports top-sellers page on fanatical
 //    fixed an stopping error on indiegala main page
+// ver 0.7.8 @ 2020-12-16
+//    fixed a bug showing incorrect colors on 'GAMES STORE LIST' on dig
+
 
 
 (async () => {
@@ -119,6 +122,8 @@
             pageAppIds = pageGameLinks.map(el => parseInt(el.pathname.split('_').pop()));
             if(document.location.pathname == "/" || document.location.pathname == "/content_main.html")
               pageDivs = pageGameLinks.map(el => el.parentElement);
+            else if(document.location.pathname == "/site_content_marketplace.html")
+              pageDivs = pageGameLinks.map(el => el.parentElement.parentElement);
             else
               pageDivs = pageGameLinks.map(el => el.parentElement.parentElement.parentElement.parentElement);
           }
