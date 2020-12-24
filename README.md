@@ -47,9 +47,13 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    fixed an stopping error on indiegala main page
     // ver 0.7.8 @ 2020-12-16
     //    fixed a bug showing incorrect colors on 'GAMES STORE LIST' on dig
+    // ver 0.7.9 @ 2020-12-25
+    //    improved steam searching
+    // ver 0.8.0 @ 2020-12-25
+    //    now searches steam on all pages of indiegala
 
 ## todo (too many)
-0. refactoring to use steam search on 2
+0. ~~refactoring to use steam search on 2~~ (done on 0.8.0)
 1. ~~main on 2~~ (done on 0.7.0)
 2. pagination on list on 2
 3. pagination on list on 4

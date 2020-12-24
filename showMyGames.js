@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.7.8
+// @version      0.8.0
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -59,7 +59,10 @@
 //    fixed an stopping error on indiegala main page
 // ver 0.7.8 @ 2020-12-16
 //    fixed a bug showing incorrect colors on 'GAMES STORE LIST' on dig
-
+// ver 0.7.9 @ 2020-12-25
+//    improved steam searching
+// ver 0.8.0 @ 2020-12-25
+//    now searches steam on all pages of indiegala
 
 
 (async () => {
@@ -71,12 +74,6 @@
   //globals
   let pageDivs = [];  //should be numeric and should be empty if no link found.
   let pageAppIds = [], pageGameLinks = [];
-
-  let navDivs = []
-  let navAppIds = [], navGameLinks = [];
-
-  let relDivs = [];
-  let relAppIds = [], relGameLinks = [];
 
   let inverseBackground = false, styleModsString = '';  //additional style fixes
   let titles = [], title = '';
@@ -140,70 +137,86 @@
         marginLeft: '922px',
       });
 
-      //games in nav bar: commented for now
-      /*
-      if(document.querySelector('div#main-submenu-big-store')) {
-        await elementReady('div#main-submenu-big-store>div>div.main-submenu-big-right>aside a.main-submenu-big-right-browse-items');
-        navDivs = [...document.querySelectorAll('div#main-submenu-big-store>div>div.main-submenu-big-right>aside div.main-submenu-big-right-item-col')]
-        .filter(el => el.querySelector('span>i.fa-steam'));
-        navGameLinks = navDivs.map(el => el.querySelector('a').pathname.split('_')[0]);  //to trim possible '_adult', etc string
-        navAppIds = navGameLinks.map(el => parseInt(el.replace(/\/$/, '').split('/').pop()));
-      }
-      */
+      //games in nav bar: removed support for now
 
+      inverseBackground = true;
       if(document.location.pathname == '/') {
         //main
         //await elementReady('div.load-more-contents>a[style=""]');  //deprecated!
-
-        //sadly impossible to tell the numbers are appid or subid.
-        //todo0: refactor to steam search
-
         isAsync = true;
         $(document).ajaxStop(() => {
           pageDivs = [...document.querySelectorAll('div#big-list-store>div.list-cont>div.item-cont, section[class^="homepage"] div.main-list-item-col div.main-list-item')]
-          .filter(el => el.querySelector('span>i.fa-steam'));
-          pageGameLinks = pageDivs.map(el => el.querySelector('a').pathname.split('_')[0]);
-          pageAppIds = pageGameLinks.map(el => parseInt(el.replace(/\/$/, '').split('/').pop()));
+          .filter(el => el.querySelector('span>i[class*="fa-steam"]'));
+          titles = pageDivs.map(el => el.querySelector('a').title);
 
-          preEntry();
+          searchSteam(titles, appIdsDict => {
+            titles.forEach((title, index) => {
+              pageAppIds[index] = appIdsDict[title];
+            });
+            preEntry();
+          });
         });
       }
       else if(document.location.pathname.startsWith('/bundle/')) {
         //bundle page
-        pageGameLinks = [...document.querySelectorAll('div.bundle-slider-game-info-pub-dev>a')];
-        pageAppIds = pageGameLinks.map(el => parseInt(el.pathname.replace(/\/$/, '').split('/').pop()));
-        pageDivs = [...document.querySelector('div.bundle-page-tier-games>div.row').children];
+        pageDivs = [...document.querySelectorAll('div.bundle-page-tier-games div.row>div>div>div')]
+        .filter(el => el.querySelector('span>i[class*="fa-steam"]'));
+        titles = pageDivs.map(el => el.querySelector('figure>img').alt);
+
+        isAsync = true;
+        searchSteam(titles, appIdsDict => {
+          titles.forEach((title, index) => {
+            pageAppIds[index] = appIdsDict[title];
+          });
+
+          pageDivs = pageDivs.map(el => [el, el.querySelector('figcaption')]);
+          preEntry();
+        });
       }
       else if(document.location.pathname.startsWith('/store/game/')) {
         //app page
-        if(document.querySelector('div.info-row div.platform-info-icon>i.fa-steam')) {
-          inverseBackground = true;
-          pageGameLinks = [document.location.pathname.split('_')[0]];
-          pageAppIds = [parseInt(pageGameLinks[0].replace(/\/$/, '').split('/').pop())];
-          pageDivs = [document.querySelector('h1')];
-        }
+        isAsync = true;
+        $(document).ajaxStop(() => {
+          if(document.querySelector('div.info-row div.platform-info-icon>i[class*="fa-steam"]')) {
+            pageDivs = [document.querySelector('h1.store-product-page-title')];
+            titles = [pageDivs[0].textContent.trim()];
+          }
 
-        //'see also' section
-        relGameLinks = [...document.querySelectorAll('section.related-products-cont>div.row>div.rel-item>div.rel-item-inner>a')];
-        if(relGameLinks.length > 0)
-          relGameLinks = relGameLinks.filter(el => el.parentElement.parentElement.querySelector('span>i.fa-steam'));
-        if(relGameLinks.length > 0) {
-          relGameLinks = relGameLinks.map(el => el.pathname.split('_')[0]);
-          relAppIds = relGameLinks.map(el => parseInt(el.replace(/\/$/, '').split('/').pop()));
-          relDivs = relGameLinks.map(el => el.parentElement.parentElement);
-        }
+          //add 'see also' section too
+          let relDivs = [...document.querySelectorAll('section.related-products-cont div.row>div.rel-item>div')];
+          if(relDivs.length > 0)
+            relDivs = relDivs.filter(el => el.querySelector('span>i[class*="fa-steam"]'));
+          if(relDivs.length > 0) {
+            pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('figcaption')]));
+            titles = titles.concat(relDivs.map(el => el.querySelector('a').title));
+          }
+
+          searchSteam(titles, appIdsDict => {
+            titles.forEach((title, index) => {
+              pageAppIds[index] = appIdsDict[title];
+            });
+            preEntry();
+          });
+        });
       }
       else if(document.location.pathname == '/games' || document.location.pathname.startsWith('/games/') ||
               document.location.pathname == '/store' || document.location.pathname.startsWith('/store/') ||
               document.location.pathname == '/search' || document.location.pathname.startsWith('/search/')) {
         //store or search (list)
         await elementReady('div.pagination>div.page-link-cont');
-        //todo2: 페이지 이동 어쩔+++
+        //todo2: 페이지 이동 어쩔+++ dom이 변하지 않는다???
 
         pageDivs = [...document.querySelectorAll('div.main-list-item-col div.main-list-item')]
-        .filter(el => el.querySelector('span>i.fa-steam'));
-        pageGameLinks = pageDivs.map(el => el.querySelector('a').pathname.split('_')[0]);
-        pageAppIds = pageGameLinks.map(el => parseInt(el.replace(/\/$/, '').split('/').pop()));
+        .filter(el => el.querySelector('span>i[class*="fa-steam"]'));
+        titles = pageDivs.map(el => el.querySelector('a').title);
+
+        isAsync = true;
+        searchSteam(titles, appIdsDict => {
+          titles.forEach((title, index) => {
+            pageAppIds[index] = appIdsDict[title];
+          });
+          preEntry();
+        });
       }
       else if(document.location.pathname == '/crackerjack') {
         //crackerjack main
@@ -229,7 +242,7 @@
         //crackerjack app page
         pageDivs = [document.querySelector('div.title')];
         if(pageDivs.length > 0) {
-          title = document.querySelector('div.title').innerText;
+          title = pageDivs[0].textContent.trim();
 
           isAsync = true;
           searchSteam([title], appIdsDict => {
@@ -238,9 +251,6 @@
           });
         }
       }
-
-      pageDivs = pageDivs.concat(navDivs).concat(relDivs);
-      pageAppIds  = pageAppIds.concat(navAppIds).concat(relDivs);
       break;
     case "fanatical.com":
     case "www.fanatical.com":
@@ -352,7 +362,13 @@
     const userData = GM_getValue('USER_DATA');
     const syncDate = GM_getValue('SYNC_DATE');
 
-    if(userData && syncDate) {
+    //tmp code for v0.8
+    if(new Date(syncDate) < new Date(2020,11,25)) {
+      console.log('title cache cleared to fix some bugs earlier than v0.8.');
+      GM_setValue('ID_FOR_TITLE_CACHE', {});
+      syncFunc(entry);
+    }
+    else if(userData && syncDate) {
       syncMenu.update(true, 'ready');
       syncMenu.updateLabel(syncDate);
       showMatched(userData);
@@ -388,20 +404,31 @@
 
   function searchSteam(titles, callBackFunc) {
     syncMenu.update(false, 'busy');
+    toast.log('searching for appIds...');
 
     let appIds = {}, count = titles.length;
-    toast.log('searching for appIds...');
 
     let localCount = 0;
     let idForTitleCache = GM_getValue('ID_FOR_TITLE_CACHE');
-    if(!idForTitleCache) {
+
+    if(count == 0) {
+      console.info('titles are empty. nothing done.');  //dev
+      preCallback_();
+    }
+    else if(!idForTitleCache) {
       idForTitleCache = {};
       GM_setValue('ID_FOR_TITLE_CACHE', idForTitleCache);
     }
 
-    console.info('titles', titles);  //dev
+    //console.info('titles', titles);  //dev
     titles.forEach((title, i) => {
-      if(idForTitleCache[title]) {
+      if(!title) {
+        localCount++;
+        console.info('title is empty. nothing done.',localCount,'/',count,'done...');  //dev
+        if(localCount == count)
+          preCallback_();
+      }
+      else if(idForTitleCache[title]) {
         localCount++;
         appIds[title] = idForTitleCache[title];
 
@@ -427,8 +454,8 @@
               appIds[key] = 'not found';
             else {
               let idx = 0;
-              if(!key.includes(' ') && titles.indexOf(key) > 0)  //for case like Basement (appId: 340150)
-                idx = titles.indexOf(key)
+              if(titles.indexOf(key) > 0)  //exact match first
+                idx = titles.indexOf(key);
 
               //ex: ["https:", "", "store.steampowered.com", "app", "70617", ...]
               const a = as[idx];
@@ -478,7 +505,8 @@
 
     function preCallback_() {
       toast.log('done searching!');
-      GM_setValue('ID_FOR_TITLE_CACHE', idForTitleCache);
+      if(idForTitleCache)
+        GM_setValue('ID_FOR_TITLE_CACHE', idForTitleCache);
       appIds = Object.fromEntries(Object.entries(appIds).filter(([k, v]) => v != 'not found'));
 
       syncMenu.update(true, 'ready');
@@ -501,8 +529,8 @@
     //ignored package is not supported. idk if it's being used at all.
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
-    console.info('pageAppIds', pageAppIds);  //dev
-    console.info('pageDivs', pageDivs);  //dev
+    //console.info('pageAppIds', pageAppIds);  //dev
+    //console.info('pageDivs', pageDivs);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -801,7 +829,7 @@
         this.div.style.opacity = 0;
       }
       else {
-        this.div.innerHTML = txt;
+        this.div.textContent = txt;
         this.div.style.transition = '';
         this.div.style.opacity = 1;
         console.log(txt);
