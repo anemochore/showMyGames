@@ -63,6 +63,7 @@
 //    improved steam searching
 // ver 0.8.0 @ 2020-12-25
 //    now searches steam on all pages of indiegala
+//    now supports on-sale page on fanatical
 
 
 (async () => {
@@ -684,8 +685,12 @@
       //todo8: Other products you may like?
       //...
     }
-    else if(document.location.pathname.split('/').pop() == '' || document.location.pathname.split('/')[2] == 'latest-deals' || document.location.pathname.split('/')[2] == 'search') {
-      //main or latest-deals
+    else if(document.location.pathname.split('/').pop() == '' || 
+      document.location.pathname.split('/')[2] == 'latest-deals' || 
+      document.location.pathname.split('/')[2] == 'search' ||
+      document.location.pathname.split('/')[2] == 'on-sale') {
+      //main, latest-deals, etc...
+      await elementReady('div.btn-all-deals-container>a');
       if(document.location.pathname.split('/').pop() == '')
         await elementReady('a.btn-all-deals');
       else if(document.location.pathname.split('/')[2] == 'latest-deals')
@@ -698,6 +703,8 @@
       .concat(    ...document.querySelectorAll('div.container>div.pb-5 '+commonCardSel))  //New Releases and ...
       .concat(    ...document.querySelectorAll('div.container>div.trending-deals-two-row-carousel '+commonCardSel))  //Trending Deals
       .concat(    ...document.querySelectorAll('div.container div.ais-Hits__root '+commonCardSel))  //search
+      .concat(    ...document.querySelectorAll('div.slick-list '+commonCardSel))  //on-sale
+      .concat(    ...document.querySelectorAll('div.mb-3 '+commonCardSel))  //on-sale publishers
       .filter(el => el.querySelector('div.icons-price-container>div.drm-container-steam') && el.querySelector('div.icons-price-container div.card-os-icons>span'));
 
       let titles = pageDivs.map(el => el.querySelector('div.product-name-container>a').innerText.trim());

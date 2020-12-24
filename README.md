@@ -51,6 +51,7 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    improved steam searching
     // ver 0.8.0 @ 2020-12-25
     //    now searches steam on all pages of indiegala
+    //    now supports on-sale page on fanatical
 
 ## todo (too many)
 0. ~~refactoring to use steam search on 2~~ (done on 0.8.0)
