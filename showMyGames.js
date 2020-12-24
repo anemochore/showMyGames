@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.0
+// @version      0.8.1
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -64,6 +64,8 @@
 // ver 0.8.0 @ 2020-12-25
 //    now searches steam on all pages of indiegala
 //    now supports on-sale page on fanatical
+// ver 0.8.1 @ 2020-12-25
+//    now supports redeem-code page on fanatical
 
 
 (async () => {
@@ -589,8 +591,8 @@
   function igGetTitles_(links, callBackFunc) {
     syncMenu.update(false, 'busy');
 
-    let titles = {}, count = links.length;
-    toast.log('searching for titles...');
+    let titlesDict = {}, count = links.length;
+    toast.log('searching for titlesDict...');
 
     links.forEach(link => {
       GM_xmlhttpRequest({
@@ -602,16 +604,16 @@
           const key = res.finalUrl.slice(res.finalUrl.indexOf('/crackerjack/')+13);
 
           if(!title)
-            titles[key] = 'not found';
+            titlesDict[key] = 'not found';
           else
-            titles[key] = title;
+            titlesDict[key] = title;
 
-          if(Object.keys(titles).length == count) {
+          if(Object.keys(titlesDict).length == count) {
             toast.log('done searching!');
-            titles = Object.fromEntries(Object.entries(titles).filter(([k, v]) => v != 'not found'));
+            titlesDict = Object.fromEntries(Object.entries(titlesDict).filter(([k, v]) => v != 'not found'));
 
             syncMenu.update(true, 'ready');
-            callBackFunc(titles);
+            callBackFunc(titlesDict);
           }
         }
       });
@@ -621,6 +623,7 @@
   async function fanaticalonMenuLoadingDone_() {
     pageDivs = [], pageAppIds = [], pageGameLinks = [];
     inverseBackground = false, styleModsString = '';
+    titles = [], title = '';
 
     if(document.location.pathname.split('/').length > 3 && document.location.pathname.split('/')[2] == 'game') {
       //app page (including star deal page)
@@ -651,7 +654,6 @@
 
       let nextButton = document.querySelector('div.carousel-buttons-container>div>button+button');
       let target = document.querySelector('div#carousel-content');
-      let titles = {};
       pageGameLinks = [target.querySelector('a.d-none') && target.querySelector('a.d-none').href];
 
       let observer = new MutationObserver(mutations => {
@@ -707,7 +709,22 @@
       .concat(    ...document.querySelectorAll('div.mb-3 '+commonCardSel))  //on-sale publishers
       .filter(el => el.querySelector('div.icons-price-container>div.drm-container-steam') && el.querySelector('div.icons-price-container div.card-os-icons>span'));
 
-      let titles = pageDivs.map(el => el.querySelector('div.product-name-container>a').innerText.trim());
+      titles = pageDivs.map(el => el.querySelector('div.product-name-container>a').innerText.trim());
+      searchSteam(titles, appIdsDict => {
+        titles.forEach((title, index) => {
+          pageAppIds[index] = appIdsDict[title];
+        });
+        preEntry();
+      });
+    }
+    else if(document.location.pathname.split('/')[2] == 'redeem-code') {
+      //redeem code page
+      await elementReady('div.carousel-buttons-container>div>button+button');
+
+      pageDivs = [...document.querySelectorAll('div.redeem-product-card')]
+      .filter(el => el.querySelector('div.product-icons-container>div.drm-container-steam'));
+      titles = pageDivs.map(el => el.querySelector('div.product-name>a').innerText.trim());
+
       searchSteam(titles, appIdsDict => {
         titles.forEach((title, index) => {
           pageAppIds[index] = appIdsDict[title];
