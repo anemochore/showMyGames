@@ -69,13 +69,14 @@
 // ver 0.8.2 @ 2020-12-27
 //    fixed a small bug on humble app page
 //    added support for 'other popular games on discount' section on humble app page
+// ver 0.8.3 @ 2020-12-27
+//    fixed a small bug on humble store/promo page
 
 
 (async () => {
   //singletons
   let syncMenu;  //instantiation should be included in below switch
   const toast = new fadingAlert();
-
 
   //globals
   let pageDivs = [];  //should be numeric and should be empty if no link found.
@@ -301,25 +302,27 @@
           preEntry();
         });
       }
-      else if(document.location.pathname == '/store' || document.location.pathname == '/store/search' || document.location.pathname.startsWith('/store/search/') || document.location.pathname.startsWith('/store/promo/')) {
+      else if(document.location.pathname == '/store' || 
+        document.location.pathname == '/store/search' || document.location.pathname.startsWith('/store/search/') || 
+        document.location.pathname.startsWith('/store/promo/')) {
         //store main or search or promo page
         //'featured' section is not supported
         //todo3: 페이지 이동 어쩔+++
 
         isAsync = true;
-        $(document).ajaxStop(() => {  //elementReady is not usable. so i had to depend on jquery...
-          inverseBackground = true;
-          pageDivs = [...document.querySelectorAll('div.entity')]
-          .filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
-          titles = pageDivs.map(el => el.querySelector('span.entity-title').textContent.trim());
-          pageDivs = pageDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]);
+        await wait_(document.body);  //elementReady is not usable. ajaxStop is not usable either!
 
-          searchSteam(titles, appIdsDict => {
-            titles.forEach((title, index) => {
-              pageAppIds[index] = appIdsDict[title];
-            });
-            preEntry();
+        pageDivs = [...document.querySelectorAll('div.entity')]
+        .filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
+        titles = pageDivs.map(el => el.querySelector('span.entity-title').textContent.trim());
+        pageDivs = pageDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]);
+
+        inverseBackground = true;
+        searchSteam(titles, appIdsDict => {
+          titles.forEach((title, index) => {
+            pageAppIds[index] = appIdsDict[title];
           });
+          preEntry();
         });
       }
       else if(document.location.pathname.startsWith('/store/')) {
@@ -770,6 +773,22 @@
       //todo7: genres,  etc...
       isAsync = false;
     }
+  }
+
+
+  //utils
+  function wait_(elToWait, selector = '') {
+    return new Promise(resolve => {
+      let observer = new MutationObserver(m => {
+        observer.disconnect();
+        resolve();
+      });
+      observer.observe(elToWait, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    });
   }
 
 
