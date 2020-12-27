@@ -14,6 +14,18 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
 3. www.fanatical.com
 4. www.humblebundle.com
 
+## todo (too many)
+0. ~~refactoring to use steam search on 2~~ (done on 0.8.0)
+1. ~~main on 2~~ (done on 0.7.0)
+2. pagination on list on 2
+3. pagination on list on 4
+4. related games on app page on 4
+5. determine if a package (subId) is wishlisted
+6. related games on app page on 3
+7. genres, top-sellers, etc... list on 3 (partially done on 0.7.7)
+99. 'traits' section on app page on 4
+999. support other sites. any suggestion?
+
 ## history
     // ver 0.1 @ 2020-10-13
     //    first version.
@@ -54,15 +66,6 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    now supports on-sale page on fanatical
     // ver 0.8.1 @ 2020-12-25
     //    now supports redeem-code page on fanatical
-
-## todo (too many)
-0. ~~refactoring to use steam search on 2~~ (done on 0.8.0)
-1. ~~main on 2~~ (done on 0.7.0)
-2. pagination on list on 2
-3. pagination on list on 4
-4. related games on app page on 4
-5. determine if a package (subId) is wishlisted
-6. related games on app page on 3
-7. genres, top-sellers, etc... list on 3 (partially done on 0.7.7)
-
-999. support other sites. any suggestion?
+    // ver 0.8.2 @ 2020-12-27
+    //    fixed a small bug on humble app page
+    //    added support for 'other popular games on discount' section on humble app page

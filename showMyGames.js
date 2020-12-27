@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.1
+// @version      0.8.2
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -66,6 +66,9 @@
 //    now supports on-sale page on fanatical
 // ver 0.8.1 @ 2020-12-25
 //    now supports redeem-code page on fanatical
+// ver 0.8.2 @ 2020-12-27
+//    fixed a small bug on humble app page
+//    added support for 'other popular games on discount' section on humble app page
 
 
 (async () => {
@@ -165,14 +168,13 @@
         pageDivs = [...document.querySelectorAll('div.bundle-page-tier-games div.row>div>div>div')]
         .filter(el => el.querySelector('span>i[class*="fa-steam"]'));
         titles = pageDivs.map(el => el.querySelector('figure>img').alt);
+        pageDivs = pageDivs.map(el => [el, el.querySelector('figcaption')]);
 
         isAsync = true;
         searchSteam(titles, appIdsDict => {
           titles.forEach((title, index) => {
             pageAppIds[index] = appIdsDict[title];
           });
-
-          pageDivs = pageDivs.map(el => [el, el.querySelector('figcaption')]);
           preEntry();
         });
       }
@@ -186,9 +188,10 @@
           }
 
           //add 'see also' section too
-          let relDivs = [...document.querySelectorAll('section.related-products-cont div.row>div.rel-item>div')];
-          if(relDivs.length > 0)
-            relDivs = relDivs.filter(el => el.querySelector('span>i[class*="fa-steam"]'));
+          let relDivs = [...document.querySelectorAll('section.related-products-cont div.row>div.rel-item>div')]
+          //if(relDivs.length > 0)
+          //  relDivs = relDivs.filter(el => el.querySelector('span>i[class*="fa-steam"]'));
+          .filter(el => el.querySelector('span>i[class*="fa-steam"]'));
           if(relDivs.length > 0) {
             pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('figcaption')]));
             titles = titles.concat(relDivs.map(el => el.querySelector('a').title));
@@ -291,13 +294,13 @@
         pageDivs = [...document.querySelectorAll('div.dd-image-box, div.content-choice')]
         .filter(el => el.querySelector('i.hb-steam'));
         titles = pageDivs.map(el => el.querySelector('span.front-page-art-image-text, span.content-choice-title').textContent.trim());
+        pageDivs = pageDivs.map(el => [el, el.querySelector('div.dd-image-box-caption-container, div.title-and-delivery-methods')]);
 
         isAsync = true;
         searchSteam(titles, appIdsDict => {
           titles.forEach((title, index) => {
             pageAppIds[index] = appIdsDict[title];
           });
-          pageDivs = pageDivs.map(el => [el, el.querySelector('div.dd-image-box-caption-container, div.title-and-delivery-methods')]);
           preEntry();
         });
       }
@@ -309,35 +312,48 @@
         isAsync = true;
         $(document).ajaxStop(() => {  //elementReady is not usable. so i had to depend on jquery...
           inverseBackground = true;
-          pageDivs = [...document.querySelectorAll('div.entity')].filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
+          pageDivs = [...document.querySelectorAll('div.entity')]
+          .filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
           titles = pageDivs.map(el => el.querySelector('span.entity-title').textContent.trim());
+          pageDivs = pageDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]);
+
           searchSteam(titles, appIdsDict => {
             titles.forEach((title, index) => {
               pageAppIds[index] = appIdsDict[title];
             });
-
-            pageDivs = pageDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]);
             preEntry();
           });
         });
       }
       else if(document.location.pathname.startsWith('/store/')) {
         //app page
-        pageDivs = document.querySelector('h1.human_name-view');
-        if(pageDivs) {
-          title = pageDivs.textContent.trim();
-          pageDivs = [pageDivs];
+        isAsync = true;
+        $(document).ajaxStop(() => {
+          if(document.querySelector('div.showcase-info-section i.hb-steam')) {
+            pageDivs = [document.querySelector('h1.human_name-view')];
+            titles = [pageDivs[0].textContent.trim()];
+          }
 
-          isAsync = true;
-          searchSteam([title], appIdsDict => {
-            pageAppIds = [appIdsDict[title]];
+          //todo99: 'traits' section
+          //...
 
-            //OTHER POPULAR GAMES ON ...
-            //todo4+++
+          //add 'see also' section too
+          inverseBackground = true;
+          let relDivs = [...document.querySelectorAll('div.recommendation-collection div.entity')]
+          .filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
 
+          if(relDivs.length > 0) {
+            pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]));
+            titles = titles.concat(relDivs.map(el => el.querySelector('span.entity-title').textContent.trim()));
+          }
+
+          searchSteam(titles, appIdsDict => {
+            titles.forEach((title, index) => {
+              pageAppIds[index] = appIdsDict[title];
+            });
             preEntry();
           });
-        }
+        });
       }
       break;
     default:
@@ -459,6 +475,8 @@
               let idx = 0;
               if(titles.indexOf(key) > 0)  //exact match first
                 idx = titles.indexOf(key);
+              
+              //todo+++: 뒤에 4 Pack 같은 게 붙는 경우!
 
               //ex: ["https:", "", "store.steampowered.com", "app", "70617", ...]
               const a = as[idx];
@@ -735,21 +753,22 @@
     else if(document.location.pathname.split('/')[2] == 'top-sellers') {
       //top-sellers page
       //'load more' is not supported!
+      inverseBackground = true;
+      styleModsString = 'fanatical-top_sellers';
+
       await elementReady('div.ts-item a');
 
       pageDivs = [...document.querySelectorAll('div.ts-item')]
       .filter(el => el.querySelector('a').href.includes('/game/'))  //excludes bundles
       .filter(el => el.querySelector('div.icons-container>div.drm-container-steam') && el.querySelector('div.icons-container div.card-os-icons>span'));
 
-      let titles = pageDivs.map(el => el.querySelector('div.ts-title>a').innerText.trim());
+      titles = pageDivs.map(el => el.querySelector('div.ts-title>a').innerText.trim());
+      pageDivs = pageDivs.map(el => el.querySelector('div.card-overlay'));
+
       searchSteam(titles, appIdsDict => {
         titles.forEach((title, index) => {
           pageAppIds[index] = appIdsDict[title];
         });
-
-        pageDivs = pageDivs.map(el => el.querySelector('div.card-overlay'));
-        inverseBackground = true;
-        styleModsString = 'fanatical-top_sellers';
         preEntry();
       });
     }
