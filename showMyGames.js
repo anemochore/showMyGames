@@ -79,7 +79,7 @@
 
   //globals
   let pageDivs = [];  //should be numeric and should be empty if no link found.
-  let pageAppIds = [], pageGameLinks = [];
+  let pageAppIds = [], links = [];
 
   let inverseBackground = false, styleModsString = '';  //additional style fixes
   let titles = [], title = '';
@@ -102,33 +102,33 @@
       });
 
       //individual bundle and app page
-      pageGameLinks = [...document.querySelectorAll('td>a>span.XDIGcontent, td.XDIGcontent>a>span')]
+      links = [...document.querySelectorAll('td>a>span.XDIGcontent, td.XDIGcontent>a>span')]
       .map(el => el.parentElement)
       .filter(el => el.href.startsWith("https://store.steampowered.com/app/"));
-      if(pageGameLinks.length > 0) {
-        pageAppIds = pageGameLinks.map(el => parseInt(el.href.replace(/\/$/, '').split('/').pop()));
-        pageDivs = pageGameLinks.map(el => el.parentElement);
+      if(links.length > 0) {
+        pageAppIds = links.map(el => parseInt(el.href.replace(/\/$/, '').split('/').pop()));
+        pageDivs = links.map(el => el.parentElement);
       }
       else {
         //top selling games, etc
-        pageGameLinks = [...document.querySelectorAll('td.XDIGcontent>a')]
+        links = [...document.querySelectorAll('td.XDIGcontent>a')]
         .filter(el => el.pathname.startsWith("/site_gamelisting_"));
-        if(pageGameLinks.length > 0) {
-          pageAppIds = pageGameLinks.map(el => parseInt(el.pathname.split('_').pop()));
-          pageDivs = pageGameLinks.map(el => el.parentElement.parentElement);
+        if(links.length > 0) {
+          pageAppIds = links.map(el => parseInt(el.pathname.split('_').pop()));
+          pageDivs = links.map(el => el.parentElement.parentElement);
         }
         else {
           //staff picks, main
-          pageGameLinks = [...document.querySelectorAll('td>a')]
+          links = [...document.querySelectorAll('td>a')]
           .filter(el => el.pathname.startsWith("/site_gamelisting_"));
-          if(pageGameLinks.length > 0) {
-            pageAppIds = pageGameLinks.map(el => parseInt(el.pathname.split('_').pop()));
+          if(links.length > 0) {
+            pageAppIds = links.map(el => parseInt(el.pathname.split('_').pop()));
             if(document.location.pathname == "/" || document.location.pathname == "/content_main.html")
-              pageDivs = pageGameLinks.map(el => el.parentElement);
+              pageDivs = links.map(el => el.parentElement);
             else if(document.location.pathname == "/site_content_marketplace.html")
-              pageDivs = pageGameLinks.map(el => el.parentElement.parentElement);
+              pageDivs = links.map(el => el.parentElement.parentElement);
             else
-              pageDivs = pageGameLinks.map(el => el.parentElement.parentElement.parentElement.parentElement);
+              pageDivs = links.map(el => el.parentElement.parentElement.parentElement.parentElement);
           }
         }
       }
@@ -192,10 +192,8 @@
           //if(relDivs.length > 0)
           //  relDivs = relDivs.filter(el => el.querySelector('span>i[class*="fa-steam"]'));
           .filter(el => el.querySelector('span>i[class*="fa-steam"]'));
-          if(relDivs.length > 0) {
-            pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('figcaption')]));
-            titles = titles.concat(relDivs.map(el => el.querySelector('a').title));
-          }
+          pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('figcaption')]));
+          titles = titles.concat(relDivs.map(el => el.querySelector('a').title));
 
           searchSteam(titles, appIdsDict => {
             titles.forEach((title, index) => {
@@ -227,15 +225,14 @@
       else if(document.location.pathname == '/crackerjack') {
         //crackerjack main
         pageDivs = [...document.querySelectorAll('div.crackerjack-item-col')];
-        pageGameLinks = pageDivs.map(el => el.querySelector('a.fit-click'));  //assuming all games are on steam
-        igGetTitles_(pageGameLinks, titlesDict => {  //very slow!
-          titles = [];
-          pageGameLinks = pageGameLinks.map(el => el.pathname.slice(13));  //removes '/crackerjack/'
+        links = pageDivs.map(el => el.querySelector('a.fit-click').href);  //assuming all games are on steam
+
+        isAsync = true;
+        getTitles_(links, 'div.title', titlesDict => {  //very slow!?
           Object.entries(titlesDict).forEach(([k, v]) => {
-            titles[pageGameLinks.indexOf(k)] = v;
+            titles[links.indexOf(k)] = v;
           });
 
-          isAsync = true;
           searchSteam(titles, appIdsDict => {
             titles.forEach((title, index) => {
               pageAppIds[index] = appIdsDict[title];
@@ -335,17 +332,15 @@
           }
 
           //todo99: 'traits' section
-          //...
+          //cannot add color to images :(
 
           //add 'see also' section too
           inverseBackground = true;
           let relDivs = [...document.querySelectorAll('div.recommendation-collection div.entity')]
           .filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
 
-          if(relDivs.length > 0) {
-            pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]));
-            titles = titles.concat(relDivs.map(el => el.querySelector('span.entity-title').textContent.trim()));
-          }
+          pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]));
+          titles = titles.concat(relDivs.map(el => el.querySelector('span.entity-title').textContent.trim()));
 
           searchSteam(titles, appIdsDict => {
             titles.forEach((title, index) => {
@@ -525,7 +520,7 @@
     });
 
     function preCallback_() {
-      toast.log('done searching!');
+      toast.log('done searching on steam!');
       if(idForTitleCache)
         GM_setValue('ID_FOR_TITLE_CACHE', idForTitleCache);
       appIds = Object.fromEntries(Object.entries(appIds).filter(([k, v]) => v != 'not found'));
@@ -606,11 +601,11 @@
 
 
   //some utils per sites
-  function igGetTitles_(links, callBackFunc) {
+  function getTitles_(links, selector, callBackFunc) {
     syncMenu.update(false, 'busy');
 
     let titlesDict = {}, count = links.length;
-    toast.log('searching for titlesDict...');
+    toast.log('searching for titles...');
 
     links.forEach(link => {
       GM_xmlhttpRequest({
@@ -618,16 +613,15 @@
         url: link,
         onload: res => {
           const doc = new DOMParser().parseFromString(res.responseText, 'text/html');
-          const title = doc.querySelector('div.title') && doc.querySelector('div.title').innerText;  //i wanna use ?.
-          const key = res.finalUrl.slice(res.finalUrl.indexOf('/crackerjack/')+13);
+          const title = doc.querySelector(selector) && doc.querySelector(selector).innerText.trim();  //i wanna use ?.
 
           if(!title)
-            titlesDict[key] = 'not found';
+            titlesDict[link] = 'not found';
           else
-            titlesDict[key] = title;
+            titlesDict[link] = title;
 
           if(Object.keys(titlesDict).length == count) {
-            toast.log('done searching!');
+            toast.log('done searching on this site!');
             titlesDict = Object.fromEntries(Object.entries(titlesDict).filter(([k, v]) => v != 'not found'));
 
             syncMenu.update(true, 'ready');
@@ -639,18 +633,18 @@
   }
 
   async function fanaticalonMenuLoadingDone_() {
-    pageDivs = [], pageAppIds = [], pageGameLinks = [];
+    pageDivs = [], pageAppIds = [], links = [];
     inverseBackground = false, styleModsString = '';
     titles = [], title = '';
 
     if(document.location.pathname.split('/').length > 3 && document.location.pathname.split('/')[2] == 'game') {
       //app page (including star deal page)
       await elementReady('div.game-details>dl.row div a');
-      pageGameLinks = [...document.querySelectorAll('div.game-details>dl.row div a')]
+      links = [...document.querySelectorAll('div.game-details>dl.row div a')]
       .filter(el => el.host == "store.steampowered.com")
       .map(el => el.href);
-      if(pageGameLinks.length > 0) {
-        pageAppIds = [parseInt(pageGameLinks[0].replace(/\/$/, '').split('/').pop())];
+      if(links.length > 0) {
+        pageAppIds = [parseInt(links[0].replace(/\/$/, '').split('/').pop())];
         pageDivs = [document.querySelector('h1')];
       }
 
@@ -672,19 +666,19 @@
 
       let nextButton = document.querySelector('div.carousel-buttons-container>div>button+button');
       let target = document.querySelector('div#carousel-content');
-      pageGameLinks = [target.querySelector('a.d-none') && target.querySelector('a.d-none').href];
+      links = [target.querySelector('a.d-none') && target.querySelector('a.d-none').href];
 
       let observer = new MutationObserver(mutations => {
-        pageGameLinks.push(target.querySelector('a.d-none') && target.querySelector('a.d-none').href);
+        links.push(target.querySelector('a.d-none') && target.querySelector('a.d-none').href);
         nextButton.click();
-        if(pageGameLinks.length == end) {
+        if(links.length == end) {
           observer.disconnect();
 
           if('scrollRestoration' in history) history.scrollRestoration = 'manual';
           window.scrollTo(0, 0);
 
           //detail에서 스팀 링크가 없는 경우가 있어서...
-          pageGameLinks.forEach((el, idx) => {
+          links.forEach((el, idx) => {
             if(!el)
               pageDivs[idx] = null;
             else
