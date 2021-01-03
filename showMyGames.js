@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.2
+// @version      0.8.4
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -13,7 +13,6 @@
 // @include      https://www.fanatical.com/*
 // @include      https://humblebundle.com/*
 // @include      https://www.humblebundle.com/*
-// @require      https://raw.githubusercontent.com/anemochore/showMyGames/master/lib/es6-element-ready.js
 // @resource     CSS https://raw.githubusercontent.com/anemochore/showMyGames/master/fy_css.css
 // @grant        GM_xmlhttpRequest
 // @grant        window.onurlchange
@@ -71,6 +70,10 @@
 //    added support for 'other popular games on discount' section on humble app page
 // ver 0.8.3 @ 2020-12-27
 //    fixed a small bug on humble store/promo page
+// ver 0.8.4 @ 2021-1-4
+//    partial support for humble main page
+//    fixed a small bug on indiegala crackerjack page
+//    small refactorings...
 
 
 (async () => {
@@ -149,7 +152,6 @@
       inverseBackground = true;
       if(document.location.pathname == '/') {
         //main
-        //await elementReady('div.load-more-contents>a[style=""]');  //deprecated!
         isAsync = true;
         $(document).ajaxStop(() => {
           pageDivs = [...document.querySelectorAll('div#big-list-store>div.list-cont>div.item-cont, section[class^="homepage"] div.main-list-item-col div.main-list-item')]
@@ -206,33 +208,38 @@
       }
       else if(document.location.pathname == '/games' || document.location.pathname.startsWith('/games/') ||
               document.location.pathname == '/store' || document.location.pathname.startsWith('/store/') ||
-              document.location.pathname == '/search' || document.location.pathname.startsWith('/search/')) {
+              /*document.location.pathname == '/search' || */document.location.pathname.startsWith('/search/')) {
         //store or search (list)
-        await elementReady('div.pagination>div.page-link-cont');
         //todo2: 페이지 이동 어쩔+++ dom이 변하지 않는다???
 
-        pageDivs = [...document.querySelectorAll('div.main-list-item-col div.main-list-item')]
-        .filter(el => el.querySelector('span>i[class*="fa-steam"]'));
-        titles = pageDivs.map(el => el.querySelector('a').title);
-
         isAsync = true;
-        searchSteam(titles, appIdsDict => {
-          titles.forEach((title, index) => {
-            pageAppIds[index] = appIdsDict[title];
+        $(document).ajaxStop(() => {
+          pageDivs = [...document.querySelectorAll('div.main-list-item-col div.main-list-item')]
+          .filter(el => el.querySelector('span>i[class*="fa-steam"]'));
+          titles = pageDivs.map(el => el.querySelector('a').title);
+
+          isAsync = true;
+          searchSteam(titles, appIdsDict => {
+            titles.forEach((title, index) => {
+              pageAppIds[index] = appIdsDict[title];
+            });
+            preEntry();
           });
-          preEntry();
         });
       }
       else if(document.location.pathname == '/crackerjack') {
         //crackerjack main
         pageDivs = [...document.querySelectorAll('div.crackerjack-item-col')];
-        links = pageDivs.map(el => el.querySelector('a.fit-click').href);  //assuming all games are on steam
+        links = pageDivs.map(el => el.querySelector('a.fit-click').href);
 
         isAsync = true;
-        getTitles_(links, 'div.title', titlesDict => {  //very slow!?
-          Object.entries(titlesDict).forEach(([k, v]) => {
-            titles[links.indexOf(k)] = v;
+        getInfo_(links, ['div.title', 'i[class*="fa-steam"]'], dicts => {  //very slow!?
+          const [titlesDict, pDict] = [...dicts];
+          Object.entries(pDict).forEach(([k, v]) => {
+            titles[links.indexOf(k)] = titlesDict[k];
           });
+          pageDivs = pageDivs.filter((el, i) => pDict[links[i]]);
+          titles = titles.filter(el => el);
 
           searchSteam(titles, appIdsDict => {
             titles.forEach((title, index) => {
@@ -244,7 +251,8 @@
       }
       else if(document.location.pathname.startsWith('/crackerjack/')) {
         //crackerjack app page
-        pageDivs = [document.querySelector('div.title')];
+        pageDivs = [document.querySelector('div.title')]
+        .filter(el => el.parentNode.querySelector('i[class*="fa-steam"]'));
         if(pageDivs.length > 0) {
           title = pageDivs[0].textContent.trim();
 
@@ -258,7 +266,7 @@
       break;
     case "fanatical.com":
     case "www.fanatical.com":
-      await elementReady('nav.navbar>div.w-100>div.nav-container');
+      await elementReady_('nav.navbar>div.w-100>div.nav-container');
       syncMenu = new someMenu(document.querySelector('nav.navbar>div.w-100>div.nav-container'), {
         display: 'flex',
         justifyContent: 'flex-end',
@@ -287,7 +295,14 @@
         height: '27px',
       });
 
-      if(document.location.pathname == '/games' || document.location.pathname.startsWith('/games/') || document.location.pathname.startsWith('/subscription/')) {
+      if(document.location.pathname == '/') {
+        //main
+        pageDivs = [...document.querySelectorAll('div.tile-holder>a>div.tile-info.store')]
+        .map(el => el.parentNode.parentNode);
+
+        //getInfo_() is not possible
+      }
+      else if(document.location.pathname == '/games' || document.location.pathname.startsWith('/games/') || document.location.pathname.startsWith('/subscription/')) {
         //bundle or subscription(hb choice) page
         pageDivs = [...document.querySelectorAll('div.dd-image-box, div.content-choice')]
         .filter(el => el.querySelector('i.hb-steam'));
@@ -306,18 +321,28 @@
         document.location.pathname == '/store/search' || document.location.pathname.startsWith('/store/search/') || 
         document.location.pathname.startsWith('/store/promo/')) {
         //store main or search or promo page
-        //'featured' section is not supported
         //todo3: 페이지 이동 어쩔+++
+        //todo: TRENDING DEALS in store page is not working+++
 
-        isAsync = true;
-        await wait_(document.body);  //elementReady is not usable. ajaxStop is not usable either!
+        await elementReady_('div.entity', document.querySelector('.entity-list.full-grid'));  //ajaxStop is not usable...
 
-        pageDivs = [...document.querySelectorAll('div.entity')]
+        pageDivs = [...document.querySelectorAll('.slick-list div.entity')]
+        //pageDivs = [...document.querySelectorAll('.slick-list div.entity, .entity-list div.entity')]  //todo
         .filter(el => el.querySelector('div.entity-purchase-details li.hb-steam'));
         titles = pageDivs.map(el => el.querySelector('span.entity-title').textContent.trim());
-        pageDivs = pageDivs.map(el => [el, el.querySelector('div.entity-meta'), el.querySelector('div.entity-purchase-details')]);
+
+        //'featured' slick list filtering
+        pageDivs.forEach((el, i) => {
+          let featuredEl = document.querySelector('.entity-list.carousel-large');
+          if(parentNodes_(el).includes(featuredEl))
+            pageDivs[i] = [el, el.querySelector('div.entity-purchase-details')];
+          else
+            pageDivs[i] = [el, el.querySelector('div.entity-purchase-details'), el.querySelector('div.entity-meta')];
+        });
 
         inverseBackground = true;
+
+        isAsync = true;
         searchSteam(titles, appIdsDict => {
           titles.forEach((title, index) => {
             pageAppIds[index] = appIdsDict[title];
@@ -449,7 +474,7 @@
         localCount++;
         appIds[title] = idForTitleCache[title];
 
-        console.info('<'+title+'> found on cache:',localCount,'/',count,'done...');  //dev
+        //console.info('<'+title+'> found on cache:',localCount,'/',count,'done...');  //dev
         if(localCount == count)
           preCallback_();
       }
@@ -553,12 +578,12 @@
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
-      let ids = [idOrIds];
-      if(Array.isArray(idOrIds)) ids = idOrIds;
+      let ids = idOrIds;
+      if(!Array.isArray(idOrIds)) ids = [idOrIds];
 
       const divOrdivs = pageDivs[idIndex];
-      let divs = [divOrdivs];
-      if(Array.isArray(divOrdivs)) divs = divOrdivs;
+      let divs = divOrdivs;
+      if(!Array.isArray(divOrdivs)) divs = [divOrdivs];
 
       if(styleModsString != '') {
         divs.forEach(div => {
@@ -604,11 +629,17 @@
 
 
   //some utils per sites
-  function getTitles_(links, selector, callBackFunc) {
+  function getInfo_(links = [], selectors, callBackFunc) {
     syncMenu.update(false, 'busy');
+    toast.log('searching for infos...');
 
-    let titlesDict = {}, count = links.length;
-    toast.log('searching for titles...');
+    if(!Array.isArray(selectors)) selectors = [selectors];
+    let dicts = new Array(selectors.length).fill({}), count = links.length * selectors.length;
+
+    if(count == 0) {
+      console.info('links are empty. nothing done.');  //dev
+      callBackFunc(dicts);
+    }
 
     links.forEach(link => {
       GM_xmlhttpRequest({
@@ -616,20 +647,25 @@
         url: link,
         onload: res => {
           const doc = new DOMParser().parseFromString(res.responseText, 'text/html');
-          const title = doc.querySelector(selector) && doc.querySelector(selector).innerText.trim();  //i wanna use ?.
+          //console.info(doc);  //uncomment to see humblebundle's initial DOM
+          selectors.forEach((selector, i) => {
+            let dict = {...dicts[i]};
+            if(doc.querySelector(selector))
+              dict[link] = doc.querySelector(selector).innerText.trim() || 'blank text';
+            else
+              dict[link] = null;
+            dicts[i] = {...dict};
 
-          if(!title)
-            titlesDict[link] = 'not found';
-          else
-            titlesDict[link] = title;
+            if(dicts.map(obj => Object.keys(obj).length).reduce((a, c) => a + c) == count) {
+              toast.log('done searching on this site!');
+              dicts.forEach((dict, i) => {
+                dicts[i] = Object.fromEntries(Object.entries(dict).filter(([k, v]) => v));
+              });
 
-          if(Object.keys(titlesDict).length == count) {
-            toast.log('done searching on this site!');
-            titlesDict = Object.fromEntries(Object.entries(titlesDict).filter(([k, v]) => v != 'not found'));
-
-            syncMenu.update(true, 'ready');
-            callBackFunc(titlesDict);
-          }
+              syncMenu.update(true, 'ready');
+              callBackFunc(dicts);
+            }
+          });
         }
       });
     });
@@ -642,7 +678,7 @@
 
     if(document.location.pathname.split('/').length > 3 && document.location.pathname.split('/')[2] == 'game') {
       //app page (including star deal page)
-      await elementReady('div.game-details>dl.row div a');
+      await elementReady_('div.game-details>dl.row div a');
       links = [...document.querySelectorAll('div.game-details>dl.row div a')]
       .filter(el => el.host == "store.steampowered.com")
       .map(el => el.href);
@@ -660,7 +696,7 @@
     }
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
-      await elementReady('div.carousel-buttons-container>div>button+button');
+      await elementReady_('div.carousel-buttons-container>div>button+button');
       pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-product-card, div[class*="-column-row"]>a>button.bundle-product-card')]
       .filter(el => el.querySelector('div.card-icons-price-container div.drm-container-steam'));
 
@@ -707,13 +743,13 @@
       document.location.pathname.split('/')[2] == 'search' ||
       document.location.pathname.split('/')[2] == 'on-sale') {
       //main, latest-deals, etc...
-      await elementReady('div.btn-all-deals-container>a');
+      await elementReady_('div.btn-all-deals-container>a');
       if(document.location.pathname.split('/').pop() == '')
-        await elementReady('a.btn-all-deals');
+        await elementReady_('a.btn-all-deals');
       else if(document.location.pathname.split('/')[2] == 'latest-deals')
-        await elementReady('ul.pagination>li>a.page-item');
+        await elementReady_('ul.pagination>li>a.page-item');
       else if(document.location.pathname.split('/')[2] == 'search')
-        await elementReady('ul.ais-Pagination__root>li.ais-Pagination__item>a.Pagination__itemLink');
+        await elementReady_('ul.ais-Pagination__root>li.ais-Pagination__item>a.Pagination__itemLink');
 
       const commonCardSel = 'div.card-container>div.video-hit-card>div.card-content';
       pageDivs = [...document.querySelectorAll('div.container>div.row>' +commonCardSel)]  //Top Sellers & More Great Deals & latest-deals
@@ -734,7 +770,7 @@
     }
     else if(document.location.pathname.split('/')[2] == 'redeem-code') {
       //redeem code page
-      await elementReady('div.carousel-buttons-container>div>button+button');
+      await elementReady_('div.carousel-buttons-container>div>button+button');
 
       pageDivs = [...document.querySelectorAll('div.redeem-product-card')]
       .filter(el => el.querySelector('div.product-icons-container>div.drm-container-steam'));
@@ -753,7 +789,7 @@
       inverseBackground = true;
       styleModsString = 'fanatical-top_sellers';
 
-      await elementReady('div.ts-item a');
+      await elementReady_('div.ts-item a');
 
       pageDivs = [...document.querySelectorAll('div.ts-item')]
       .filter(el => el.querySelector('a').href.includes('/game/'))  //excludes bundles
@@ -777,18 +813,35 @@
 
 
   //utils
-  function wait_(elToWait, selector = '') {
-    return new Promise(resolve => {
-      let observer = new MutationObserver(m => {
-        observer.disconnect();
-        resolve();
-      });
-      observer.observe(elToWait, {
+  function elementReady_(selector, baseEl = document.documentElement) {
+    return new Promise((resolve, reject) => {
+      let el = baseEl.querySelector(selector);
+      if(el) resolve(el);
+
+      new MutationObserver((mutationRecords, observer) => {
+        let els = [...document.querySelectorAll(selector)];
+        if(els.length > 0) {
+          console.log(mutationRecords);
+          console.log(els[els.length-1].innerText);
+          observer.disconnect();
+          resolve(els[els.length-1]);
+        }
+        else
+          observer.takeRecords();  //empty queue
+      })
+      .observe(baseEl, {
         childList: true,
-        characterData: true,
-        subtree: true,
+        subtree: true
       });
     });
+  }
+
+  function parentNodes_(el) {
+    return [...(function*(e) {
+      do
+        yield e;
+      while(e = e.parentNode);
+    })(el)];
   }
 
 

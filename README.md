@@ -69,3 +69,9 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     // ver 0.8.2 @ 2020-12-27
     //    fixed a small bug on humble app page
     //    added support for 'other popular games on discount' section on humble app page
+    // ver 0.8.3 @ 2020-12-27
+    //    fixed a small bug on humble store/promo page
+    // ver 0.8.4 @ 2021-1-4
+    //    partial support for humble main page
+    //    fixed a small bug on indiegala crackerjack page
+    //    small refactorings...
