@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.4
+// @version      0.8.6
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -74,6 +74,10 @@
 //    partial support for humble main page
 //    fixed a small bug on indiegala crackerjack page
 //    small refactorings...
+// ver 0.8.5 @ 2021-1-8
+//    updated for main page on fanatical
+// ver 0.8.6 @ 2021-1-9
+//    now supports most pages on fanatical
 
 
 (async () => {
@@ -300,7 +304,7 @@
         pageDivs = [...document.querySelectorAll('div.tile-holder>a>div.tile-info.store')]
         .map(el => el.parentNode.parentNode);
 
-        //getInfo_() is not possible
+        //getInfo_() is not possible since pages are dynamically served
       }
       else if(document.location.pathname == '/games' || document.location.pathname.startsWith('/games/') || document.location.pathname.startsWith('/subscription/')) {
         //bundle or subscription(hb choice) page
@@ -431,7 +435,7 @@
       onload: res => {
         const userData = JSON.parse(res.responseText);
         if(userData.rgWishlist.length == 0) {
-          alert('login to steam first and retry.');
+          alert('login to steam and visit https://store.steampowered.com/dynamicstore/userdata/ and hit refresh and then retry this script.');
           return;
         }
         GM_setValue('USER_DATA', userData);
@@ -474,12 +478,25 @@
         localCount++;
         appIds[title] = idForTitleCache[title];
 
-        //console.info('<'+title+'> found on cache:',localCount,'/',count,'done...');  //dev
+        //console.info('<'+title+'> found on cache: '+localCount+'/'+count+' done...');
         if(localCount == count)
           preCallback_();
       }
       else {
+        //뒤에 4 Pack 같은 게 붙는 경우 떼어냄. 물론 예외도 있으나 몇 개 없으니 무시하겠음.
+        const oldTitle = title;
+        const strToRemove = [' 4 Pack', ' 4-Pack', ' 2 Pack', ' 2-Pack'];
+        for(str of strToRemove) {  //to use break
+          if(title.endsWith(str)) {
+            title = title.slice(0, -str.length)
+            titles[i] = title;
+            break;
+          }
+        }
+        if(oldTitle != title) console.info(oldTitle + ' adjusted to ' + title);  //dev
+        
         const targetUrl = 'https://store.steampowered.com/search/?ignore_preferences=1&term=' + encodeURIComponent(title);
+        //console.info('opening '+targetUrl+'...');  //dev
         GM_xmlhttpRequest({
           method: 'GET',
           url: targetUrl,
@@ -490,16 +507,14 @@
             const as = [...steamDoc.querySelectorAll('div#search_resultsRows>a.search_result_row')];
             const urls = as.map(el => el.href);
             const titles = as.map(el => el.querySelector('span.title').textContent);
+            //console.log(urls);  //dev
 
-            let async = false;
             if(urls.length == 0)
               appIds[key] = 'not found';
             else {
               let idx = 0;
               if(titles.indexOf(key) > 0)  //exact match first
                 idx = titles.indexOf(key);
-              
-              //todo+++: 뒤에 4 Pack 같은 게 붙는 경우!
 
               //ex: ["https:", "", "store.steampowered.com", "app", "70617", ...]
               const a = as[idx];
@@ -509,7 +524,7 @@
               if(type == 'app') {
                 appIds[key] = parseInt(id);
                 idForTitleCache[key] = parseInt(id);
-                toast.log('added <'+key+'> to title cache.');
+                console.info('added <'+key+'> to title cache.');
               }
               else if(type == 'bundle') {
                 let items = JSON.parse(a.getAttribute('data-ds-bundle-data')).m_rgItems.map(el => el.m_rgIncludedAppIDs);
@@ -523,14 +538,14 @@
 
                 appIds[key] = items.slice();
                 idForTitleCache[key] = appIds[key];
-                toast.log('added <'+key+'> to title cache.');
+                console.info('added <'+key+'> to title cache.');  //번들은 풀어서 각각을 저장함.
               }
               else if(type == 'sub') {
                 //todo5: 패키지에 속한 애들이 위시리스트에 있는지는 따로 봐야 함.+++
                 //let items = JSON.parse(a.getAttribute('data-ds-appid')).split(',').map(el => parseInt(el));
                 appIds[key] = 'sub' + id;
                 idForTitleCache[key] = appIds[key];
-                toast.log('added <'+key+'> to title cache.');
+                console.info('added <'+key+'> to title cache.');
               }
               else {
                 console.error('unsupported url:', res.finalUrl);
@@ -539,7 +554,7 @@
             }
             localCount++;
 
-            console.info('<'+title+'> searched:',localCount,'/',count,'done...');  //dev
+            //console.info('<'+title+'> searched: '+localCount+'/'+count+' done...');
             if(localCount == count)
               preCallback_();
           }
@@ -573,8 +588,8 @@
     //ignored package is not supported. idk if it's being used at all.
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
-    //console.info('pageAppIds', pageAppIds);  //dev
-    //console.info('pageDivs', pageDivs);  //dev
+    console.info('pageAppIds', pageAppIds);  //dev
+    console.info('pageDivs', pageDivs);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -683,90 +698,81 @@
       .filter(el => el.host == "store.steampowered.com")
       .map(el => el.href);
       if(links.length > 0) {
-        pageAppIds = [parseInt(links[0].replace(/\/$/, '').split('/').pop())];
+        let tokens = links[0].replace(/\/$/, '').split('/');
+        pageAppIds = [parseInt(tokens.pop())];
+        console.log(pageAppIds);
+        if(tokens.pop() == 'sub') pageAppIds = ['sub' + pageAppIds[0]];
+        console.log(pageAppIds);
         pageDivs = [document.querySelector('h1')];
       }
 
-      //'you may also like' section
-      //todo6: click click click...+++
-      //relGameLinks = [...document.querySelectorAll('div.slick-list div.card-container a.w-100')];
-      //if(relGameLinks.length> console.log(relGameLinks);
-
-      preEntry();
+      //'you may also like' 섹션은 다음 선택자로 main과 비슷하게 처리하면 되는데
+      //로딩을 기다려야 하며 페이지 이동까지 해야 해서 귀찮다. 패스.
+      //const commonCardSel = 'div:not([class$="-cloned"])>div>' + 'div.card-container>div[class]>div[class]';
     }
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
-      await elementReady_('div.carousel-buttons-container>div>button+button');
-      pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-product-card, div[class*="-column-row"]>a>button.bundle-product-card')]
-      .filter(el => el.querySelector('div.card-icons-price-container div.drm-container-steam'));
+      await elementReady_('div.container .bundle-product-card', document.querySelector('div.content'), true);
 
-      let [start, end] = document.querySelector('div.carousel-buttons-container>div.carousel-count').innerText.split(' of ')
-      .map(el => parseInt(el));
+      if(!document.querySelector('div.product-trust>div.card-body span')) {
+        //mix bundle, etc.
 
-      let nextButton = document.querySelector('div.carousel-buttons-container>div>button+button');
-      let target = document.querySelector('div#carousel-content');
-      links = [target.querySelector('a.d-none') && target.querySelector('a.d-none').href];
+        pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-product-card, div[class*="-column-row"]>a>button.bundle-product-card')]
+        .filter(el => el.querySelector('div.card-icons-price-container div.drm-container-steam'));
 
-      let observer = new MutationObserver(mutations => {
-        links.push(target.querySelector('a.d-none') && target.querySelector('a.d-none').href);
-        nextButton.click();
-        if(links.length == end) {
-          observer.disconnect();
+        let [start, end] = document.querySelector('div.carousel-buttons-container>div.carousel-count').innerText.split(' of ')
+        .map(el => parseInt(el));
 
-          if('scrollRestoration' in history) history.scrollRestoration = 'manual';
-          window.scrollTo(0, 0);
+        let nextButton = document.querySelector('div.carousel-buttons-container>div>button+button');
+        let target = document.querySelector('div#carousel-content');
+        links = [target.querySelector('a.d-none') && target.querySelector('a.d-none').href];
 
-          //detail에서 스팀 링크가 없는 경우가 있어서...
-          links.forEach((el, idx) => {
-            if(!el)
-              pageDivs[idx] = null;
-            else
-              pageAppIds[idx] = parseInt(el.replace(/\/$/, '').split('/').pop());
-          });
+        let observer = new MutationObserver(mutations => {
+          links.push(target.querySelector('a.d-none') && target.querySelector('a.d-none').href);
+          nextButton.click();
+          if(links.length == end) {
+            observer.disconnect();
 
-          preEntry();
-        }
-      });
+            if('scrollRestoration' in history) history.scrollRestoration = 'manual';
+            window.scrollTo(0, 0);
 
-      observer.observe(target, {
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-      nextButton.click();
+            //detail에서 스팀 링크가 없는 경우가 있어서...
+            links.forEach((el, idx) => {
+              if(!el)
+                pageDivs[idx] = null;
+              else
+                pageAppIds[idx] = parseInt(el.replace(/\/$/, '').split('/').pop());
+            });
 
-      //todo8: Other products you may like?
-      //...
-    }
-    else if(document.location.pathname.split('/').pop() == '' || 
-      document.location.pathname.split('/')[2] == 'latest-deals' || 
-      document.location.pathname.split('/')[2] == 'search' ||
-      document.location.pathname.split('/')[2] == 'on-sale') {
-      //main, latest-deals, etc...
-      await elementReady_('div.btn-all-deals-container>a');
-      if(document.location.pathname.split('/').pop() == '')
-        await elementReady_('a.btn-all-deals');
-      else if(document.location.pathname.split('/')[2] == 'latest-deals')
-        await elementReady_('ul.pagination>li>a.page-item');
-      else if(document.location.pathname.split('/')[2] == 'search')
-        await elementReady_('ul.ais-Pagination__root>li.ais-Pagination__item>a.Pagination__itemLink');
-
-      const commonCardSel = 'div.card-container>div.video-hit-card>div.card-content';
-      pageDivs = [...document.querySelectorAll('div.container>div.row>' +commonCardSel)]  //Top Sellers & More Great Deals & latest-deals
-      .concat(    ...document.querySelectorAll('div.container>div.pb-5 '+commonCardSel))  //New Releases and ...
-      .concat(    ...document.querySelectorAll('div.container>div.trending-deals-two-row-carousel '+commonCardSel))  //Trending Deals
-      .concat(    ...document.querySelectorAll('div.container div.ais-Hits__root '+commonCardSel))  //search
-      .concat(    ...document.querySelectorAll('div.slick-list '+commonCardSel))  //on-sale
-      .concat(    ...document.querySelectorAll('div.mb-3 '+commonCardSel))  //on-sale publishers
-      .filter(el => el.querySelector('div.icons-price-container>div.drm-container-steam') && el.querySelector('div.icons-price-container div.card-os-icons>span'));
-
-      titles = pageDivs.map(el => el.querySelector('div.product-name-container>a').innerText.trim());
-      searchSteam(titles, appIdsDict => {
-        titles.forEach((title, index) => {
-          pageAppIds[index] = appIdsDict[title];
+            preEntry();
+          }
         });
-        preEntry();
-      });
+
+        observer.observe(target, {
+          childList: true,
+          characterData: true,
+          subtree: true,
+        });
+        nextButton.click();
+
+        //todo8: Other products you may like?
+        //...
+      }
+      else if(document.querySelector('div.product-trust>div.card-body span').parentNode.innerText == 'Redeem on Steam') {
+        //jackbox bundle, etc.
+
+        pageDivs = [...document.querySelectorAll('div.container div.container>div.row')];
+
+        titles = pageDivs.map(el => (el.querySelector('p[class]').firstChild.textContent.trim()));
+        searchSteam(titles, appIdsDict => {
+          titles.forEach((title, index) => {
+            pageAppIds[index] = appIdsDict[title];
+          });
+          preEntry();
+        });
+      }
+      else
+        preEntry();  //nothing to do
     }
     else if(document.location.pathname.split('/')[2] == 'redeem-code') {
       //redeem code page
@@ -806,35 +812,65 @@
       });
     }
     else {
-      //todo7: genres,  etc...
-      isAsync = false;
+      //main, top-sellers, on-sale, etc...
+      await elementReady_('div.container>div[class]', document.querySelector('div.content'), true, true);
+      //console.log([...document.querySelector('div.content').querySelectorAll('div.container>div[class]')].map(el => el.className));  //dev
+
+      const commonCardSel = 'div.card-container>div[class]>div[class]';
+      pageDivs = [...document.querySelectorAll('div.container>div[class] ' + commonCardSel)]
+      .concat(    ...document.querySelectorAll('div.container div.ais-Hits__root ' + commonCardSel))  //search
+      .filter(el => el.querySelector('div[class$="price-container"]>div.drm-container-steam') && el.querySelector('div[class$="price-container"] div.card-os-icons>span'));
+
+      titles = pageDivs.map(el => (el.querySelector('div.product-name-container>a') || el.parentNode.querySelector('div.overlay-content-container a')).innerText.trim());
+      searchSteam(titles, appIdsDict => {
+        titles.forEach((title, index) => {
+          pageAppIds[index] = appIdsDict[title];
+        });
+
+        pageDivs = pageDivs.map(el => [el, el.querySelector('div.hitCardStripe')]);
+        preEntry();
+      });
     }
   }
 
 
   //utils
-  function elementReady_(selector, baseEl = document.documentElement) {
+  function elementReady_(selector, baseEl = document.documentElement, waitFirst = false, checkIfAllChildrenAreAdded = false) {
     return new Promise((resolve, reject) => {
-      let el = baseEl.querySelector(selector);
-      if(el) resolve(el);
+      let els = [...baseEl.querySelectorAll(selector)];
+      if(els.length > 0 && !waitFirst) resolve(els[els.length-1]);
+      
+      this.prevElNumber = els.length;
 
-      new MutationObserver((mutationRecords, observer) => {
-        let els = [...document.querySelectorAll(selector)];
+      new MutationObserver(async (mutationRecords, observer) => {
+        let els = [...baseEl.querySelectorAll(selector)];
         if(els.length > 0) {
-          console.log(mutationRecords);
-          console.log(els[els.length-1].innerText);
-          observer.disconnect();
-          resolve(els[els.length-1]);
+          if(!checkIfAllChildrenAreAdded) {
+            observer.disconnect();
+            resolve(els[els.length-1]);
+          }
+
+          if(els.length > this.prevElNumber) {
+            this.prevElNumber = els.length;
+            await sleep_(1000);  //dirty hack
+            if([...baseEl.querySelectorAll(selector)].length == this.prevElNumber) {
+              observer.disconnect();
+              resolve(els[els.length-1]);
+            }
+          }
         }
-        else
-          observer.takeRecords();  //empty queue
       })
       .observe(baseEl, {
         childList: true,
         subtree: true
       });
     });
+    
+    function sleep_(ms) {
+      return new Promise(r => setTimeout(r, ms));
+    }
   }
+
 
   function parentNodes_(el) {
     return [...(function*(e) {

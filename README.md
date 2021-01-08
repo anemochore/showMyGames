@@ -75,3 +75,7 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    partial support for humble main page
     //    fixed a small bug on indiegala crackerjack page
     //    small refactorings...
+    // ver 0.8.5 @ 2021-1-8
+    //    updated for main page on fanatical
+    // ver 0.8.6 @ 2021-1-9
+    //    now supports most pages on fanatical
