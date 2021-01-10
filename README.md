@@ -79,3 +79,5 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    updated for main page on fanatical
     // ver 0.8.6 @ 2021-1-9
     //    now supports most pages on fanatical
+    // ver 0.8.7 @ 2021-1-10
+    //    fixed a bug on fanatical app page

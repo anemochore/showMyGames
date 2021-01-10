@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.6
+// @version      0.8.7
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -78,6 +78,8 @@
 //    updated for main page on fanatical
 // ver 0.8.6 @ 2021-1-9
 //    now supports most pages on fanatical
+// ver 0.8.7 @ 2021-1-10
+//    fixed a bug on fanatical app page
 
 
 (async () => {
@@ -458,7 +460,7 @@
     let idForTitleCache = GM_getValue('ID_FOR_TITLE_CACHE');
 
     if(count == 0) {
-      console.info('titles are empty. nothing done.');  //dev
+      console.log('titles are empty. nothing done.');
       preCallback_();
     }
     else if(!idForTitleCache) {
@@ -588,8 +590,8 @@
     //ignored package is not supported. idk if it's being used at all.
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
-    console.info('pageAppIds', pageAppIds);  //dev
-    console.info('pageDivs', pageDivs);  //dev
+    //console.info('pageAppIds', pageAppIds);  //dev
+    //console.info('pageDivs', pageDivs);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -700,15 +702,15 @@
       if(links.length > 0) {
         let tokens = links[0].replace(/\/$/, '').split('/');
         pageAppIds = [parseInt(tokens.pop())];
-        console.log(pageAppIds);
         if(tokens.pop() == 'sub') pageAppIds = ['sub' + pageAppIds[0]];
-        console.log(pageAppIds);
         pageDivs = [document.querySelector('h1')];
       }
 
       //'you may also like' 섹션은 다음 선택자로 main과 비슷하게 처리하면 되는데
       //로딩을 기다려야 하며 페이지 이동까지 해야 해서 귀찮다. 패스.
       //const commonCardSel = 'div:not([class$="-cloned"])>div>' + 'div.card-container>div[class]>div[class]';
+
+      preEntry();
     }
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
