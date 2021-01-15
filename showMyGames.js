@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.7
+// @version      0.8.8
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -80,6 +80,8 @@
 //    now supports most pages on fanatical
 // ver 0.8.7 @ 2021-1-10
 //    fixed a bug on fanatical app page
+// ver 0.8.8 @ 2021-1-16
+//    fixed a bug on humble app page
 
 
 (async () => {
@@ -360,7 +362,7 @@
         //app page
         isAsync = true;
         $(document).ajaxStop(() => {
-          if(document.querySelector('div.showcase-info-section i.hb-steam')) {
+          if(document.querySelector('div.showcase-info-section i.hb-steam') && document.querySelector('h1.human_name-view')) {
             pageDivs = [document.querySelector('h1.human_name-view')];
             titles = [pageDivs[0].textContent.trim()];
           }
