@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.8
+// @version      0.8.9
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -82,6 +82,8 @@
 //    fixed a bug on fanatical app page
 // ver 0.8.8 @ 2021-1-16
 //    fixed a bug on humble app page
+// ver 0.8.9 @ 2021-1-16
+//    fixed a bug on fanatical main page
 
 
 (async () => {
@@ -803,7 +805,7 @@
 
       pageDivs = [...document.querySelectorAll('div.ts-item')]
       .filter(el => el.querySelector('a').href.includes('/game/'))  //excludes bundles
-      .filter(el => el.querySelector('div.icons-container>div.drm-container-steam') && el.querySelector('div.icons-container div.card-os-icons>span'));
+      .filter(el => el.querySelector('div.icons-container>div.drm-container-steam'));  //&& el.querySelector('div.icons-container div.card-os-icons>span'));
 
       titles = pageDivs.map(el => el.querySelector('div.ts-title>a').innerText.trim());
       pageDivs = pageDivs.map(el => el.querySelector('div.card-overlay'));
@@ -816,7 +818,7 @@
       });
     }
     else {
-      //main, top-sellers, on-sale, etc...
+      //main, on-sale, etc...
       await elementReady_('div.container>div[class]', document.querySelector('div.content'), true, true);
       //console.log([...document.querySelector('div.content').querySelectorAll('div.container>div[class]')].map(el => el.className));  //dev
 
@@ -825,7 +827,7 @@
       .concat(    ...document.querySelectorAll('div.container div.ais-Hits__root ' + commonCardSel))  //search
       .filter(el => el.querySelector('div[class$="price-container"]>div.drm-container-steam') && el.querySelector('div[class$="price-container"] div.card-os-icons>span'));
 
-      titles = pageDivs.map(el => (el.querySelector('div.product-name-container>a') || el.parentNode.querySelector('div.overlay-content-container a')).innerText.trim());
+      titles = pageDivs.map(el => (el.querySelector('a') || (el.parentNode.querySelector('div.overlay-content-container a') && el.parentNode.querySelector('div.overlay-content-container a'))).innerText.trim());
       searchSteam(titles, appIdsDict => {
         titles.forEach((title, index) => {
           pageAppIds[index] = appIdsDict[title];
