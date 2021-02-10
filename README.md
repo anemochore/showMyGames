@@ -83,3 +83,7 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    fixed a bug on fanatical app page
     // ver 0.8.8 @ 2021-1-16
     //    fixed a bug on humble app page
+    // ver 0.8.9 @ 2021-1-16
+    //    fixed a bug on fanatical main page
+    // ver 0.8.10 @ 2021-1-16
+    //    applied dom change on fanatical bundle pages

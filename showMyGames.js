@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.9
+// @version      0.8.10
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -84,6 +84,8 @@
 //    fixed a bug on humble app page
 // ver 0.8.9 @ 2021-1-16
 //    fixed a bug on fanatical main page
+// ver 0.8.10 @ 2021-1-16
+//    applied dom change on fanatical bundle pages
 
 
 (async () => {
@@ -718,12 +720,12 @@
     }
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
-      await elementReady_('div.container .bundle-product-card', document.querySelector('div.content'), true);
+      await elementReady_('div.container .bundle-game-card', document.querySelector('div.content'), true);
 
       if(!document.querySelector('div.product-trust>div.card-body span')) {
         //mix bundle, etc.
 
-        pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-product-card, div[class*="-column-row"]>a>button.bundle-product-card')]
+        pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-game-card, div[class*="-column-row"]>a>button.bundle-game-card')]
         .filter(el => el.querySelector('div.card-icons-price-container div.drm-container-steam'));
 
         let [start, end] = document.querySelector('div.carousel-buttons-container>div.carousel-count').innerText.split(' of ')
