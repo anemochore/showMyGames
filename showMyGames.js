@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.10
+// @version      0.8.11
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -86,6 +86,8 @@
 //    fixed a bug on fanatical main page
 // ver 0.8.10 @ 2021-1-16
 //    applied dom change on fanatical bundle pages
+// ver 0.8.11 @ 2021-2-19
+//    now supports fanatical mystery bundle pages
 
 
 (async () => {
@@ -720,55 +722,57 @@
     }
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
-      await elementReady_('div.container .bundle-game-card', document.querySelector('div.content'), true);
+      await elementReady_('div.container .bundle-game-card, div.container .mystery-game', document.querySelector('div.content'), true);
 
       if(!document.querySelector('div.product-trust>div.card-body span')) {
         //mix bundle, etc.
-
         pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-game-card, div[class*="-column-row"]>a>button.bundle-game-card')]
         .filter(el => el.querySelector('div.card-icons-price-container div.drm-container-steam'));
 
-        let [start, end] = document.querySelector('div.carousel-buttons-container>div.carousel-count').innerText.split(' of ')
-        .map(el => parseInt(el));
+        if(pageDivs.length > 0) {
+          let [start, end] = document.querySelector('div.carousel-buttons-container>div.carousel-count').innerText.split(' of ')
+          .map(el => parseInt(el));
 
-        let nextButton = document.querySelector('div.carousel-buttons-container>div>button+button');
-        let target = document.querySelector('div#carousel-content');
-        links = [target.querySelector('a.d-none') && target.querySelector('a.d-none').href];
+          let nextButton = document.querySelector('div.carousel-buttons-container>div>button+button');
+          let target = document.querySelector('div#carousel-content');
+          links = [target.querySelector('a.d-none') && target.querySelector('a.d-none').href];
 
-        let observer = new MutationObserver(mutations => {
-          links.push(target.querySelector('a.d-none') && target.querySelector('a.d-none').href);
+          let observer = new MutationObserver(mutations => {
+            links.push(target.querySelector('a.d-none') && target.querySelector('a.d-none').href);
+            nextButton.click();
+            if(links.length == end) {
+              observer.disconnect();
+
+              if('scrollRestoration' in history) history.scrollRestoration = 'manual';
+              window.scrollTo(0, 0);
+
+              //detail에서 스팀 링크가 없는 경우가 있어서...
+              links.forEach((el, idx) => {
+                if(!el)
+                  pageDivs[idx] = null;
+                else
+                  pageAppIds[idx] = parseInt(el.replace(/\/$/, '').split('/').pop());
+              });
+
+              preEntry();
+            }
+          });
+
+          observer.observe(target, {
+            childList: true,
+            characterData: true,
+            subtree: true,
+          });
           nextButton.click();
-          if(links.length == end) {
-            observer.disconnect();
 
-            if('scrollRestoration' in history) history.scrollRestoration = 'manual';
-            window.scrollTo(0, 0);
-
-            //detail에서 스팀 링크가 없는 경우가 있어서...
-            links.forEach((el, idx) => {
-              if(!el)
-                pageDivs[idx] = null;
-              else
-                pageAppIds[idx] = parseInt(el.replace(/\/$/, '').split('/').pop());
-            });
-
-            preEntry();
-          }
-        });
-
-        observer.observe(target, {
-          childList: true,
-          characterData: true,
-          subtree: true,
-        });
-        nextButton.click();
-
-        //todo8: Other products you may like?
-        //...
+          //todo8: Other products you may like?
+          //...
+        }
+        else
+          preEntry();  //nothing to do
       }
       else if(document.querySelector('div.product-trust>div.card-body span').parentNode.innerText == 'Redeem on Steam') {
         //jackbox bundle, etc.
-
         pageDivs = [...document.querySelectorAll('div.container div.container>div.row')];
 
         titles = pageDivs.map(el => (el.querySelector('p[class]').firstChild.textContent.trim()));
