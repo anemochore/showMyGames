@@ -89,3 +89,6 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    applied dom change on fanatical bundle pages
     // ver 0.8.11 @ 2021-2-19
     //    now supports fanatical mystery bundle pages
+    // ver 0.8.12 @ 2021-2-21
+    //    fixed a bug on fanatical bundle pages
+    //    temporarily stopped the parsing on fanatical main (and etc) pages
