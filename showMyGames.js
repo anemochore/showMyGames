@@ -88,6 +88,8 @@
 //    applied dom change on fanatical bundle pages
 // ver 0.8.11 @ 2021-2-19
 //    now supports fanatical mystery bundle pages
+// ver 0.8.12 @ 2021-2-21
+//    fixed a bug on fanatical bundle pages
 
 
 (async () => {
@@ -331,8 +333,8 @@
           preEntry();
         });
       }
-      else if(document.location.pathname == '/store' || 
-        document.location.pathname == '/store/search' || document.location.pathname.startsWith('/store/search/') || 
+      else if(document.location.pathname == '/store' ||
+        document.location.pathname == '/store/search' || document.location.pathname.startsWith('/store/search/') ||
         document.location.pathname.startsWith('/store/promo/')) {
         //store main or search or promo page
         //todo3: 페이지 이동 어쩔+++
@@ -488,7 +490,7 @@
         localCount++;
         appIds[title] = idForTitleCache[title];
 
-        //console.info('<'+title+'> found on cache: '+localCount+'/'+count+' done...');
+        console.info('<'+title+'> found on cache: '+localCount+'/'+count+' done...');  //dev (verbose)
         if(localCount == count)
           preCallback_();
       }
@@ -504,7 +506,7 @@
           }
         }
         if(oldTitle != title) console.info(oldTitle + ' adjusted to ' + title);  //dev
-        
+
         const targetUrl = 'https://store.steampowered.com/search/?ignore_preferences=1&term=' + encodeURIComponent(title);
         //console.info('opening '+targetUrl+'...');  //dev
         GM_xmlhttpRequest({
@@ -598,8 +600,8 @@
     //ignored package is not supported. idk if it's being used at all.
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
-    //console.info('pageAppIds', pageAppIds);  //dev
-    //console.info('pageDivs', pageDivs);  //dev
+    console.info('pageAppIds', pageAppIds);  //dev
+    console.info('pageDivs', pageDivs);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -701,9 +703,9 @@
     inverseBackground = false, styleModsString = '';
     titles = [], title = '';
 
-    if(document.location.pathname.split('/').length > 3 && document.location.pathname.split('/')[2] == 'game') {
+    if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'game' || document.location.pathname.split('/')[2] == 'dlc')) {
       //app page (including star deal page)
-      await elementReady_('div.game-details>dl.row div a');
+      await elementReady_('div.game-details>dl.row div');
       links = [...document.querySelectorAll('div.game-details>dl.row div a')]
       .filter(el => el.host == "store.steampowered.com")
       .map(el => el.href);
@@ -726,8 +728,7 @@
 
       if(!document.querySelector('div.product-trust>div.card-body span')) {
         //mix bundle, etc.
-        pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div.bundle-game-card, div[class*="-column-row"]>a>button.bundle-game-card')]
-        .filter(el => el.querySelector('div.card-icons-price-container div.drm-container-steam'));
+        pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div[class^="bundle"], div[class*="-column-row"]>a>button[class^="bundle"]')];
 
         if(pageDivs.length > 0) {
           let [start, end] = document.querySelector('div.carousel-buttons-container>div.carousel-count').innerText.split(' of ')
@@ -746,10 +747,12 @@
               if('scrollRestoration' in history) history.scrollRestoration = 'manual';
               window.scrollTo(0, 0);
 
-              //detail에서 스팀 링크가 없는 경우가 있어서...
+              //detail에서 스팀 링크가 없는 경우가 있어서... pageDivs에서 filter하지 않고 여기서 처리함.
               links.forEach((el, idx) => {
-                if(!el)
+                if(!el) {
+                  pageAppIds[idx] = null;
                   pageDivs[idx] = null;
+                }
                 else
                   pageAppIds[idx] = parseInt(el.replace(/\/$/, '').split('/').pop());
               });
@@ -825,21 +828,38 @@
     }
     else {
       //main, on-sale, etc...
-      await elementReady_('div.container>div[class]', document.querySelector('div.content'), true, true);
+      await elementReady_('div.container>div[class] img', document.querySelector('div.content'), true, true);
       //console.log([...document.querySelector('div.content').querySelectorAll('div.container>div[class]')].map(el => el.className));  //dev
 
       const commonCardSel = 'div.card-container>div[class]>div[class]';
-      pageDivs = [...document.querySelectorAll('div.container>div[class] ' + commonCardSel)]
-      .concat(    ...document.querySelectorAll('div.container div.ais-Hits__root ' + commonCardSel))  //search
+      pageDivs = [...document.querySelectorAll('div.content div.container>div[class] ' + commonCardSel)]
+      .concat(    ...document.querySelectorAll('div.content div.container div.ais-Hits__root ' + commonCardSel))  //search
+      .filter(el => el.querySelector('a[class$="link"]'))
+      .filter(el => el.querySelector('a[class$="link"]').href.split('/')[4] == 'game' || el.querySelector('a[class$="link"]').href.split('/')[4] == 'dlc')
       .filter(el => el.querySelector('div[class$="price-container"]>div.drm-container-steam') && el.querySelector('div[class$="price-container"] div.card-os-icons>span'));
 
-      titles = pageDivs.map(el => (el.querySelector('a') || (el.parentNode.querySelector('div.overlay-content-container a') && el.parentNode.querySelector('div.overlay-content-container a'))).innerText.trim());
+      //to load images
+      pageDivs.forEach(async (el, idx) => {
+        el.scrollIntoView();
+        //await sleep(2000);
+        //alert(idx);
+      });
+      window.scrollTo(0, 0);
+
+      titles = pageDivs.map(el => el.querySelector('img').alt || (el.querySelector('a') || (el.parentNode.querySelector('div.overlay-content-container a') && el.parentNode.querySelector('div.overlay-content-container a'))).innerText.trim());
+      //console.log(pageDivs);
+      //console.log(titles);
+
+      //v0.8.12
+      preEntry();  //todo: fix this T_T
+
       searchSteam(titles, appIdsDict => {
         titles.forEach((title, index) => {
           pageAppIds[index] = appIdsDict[title];
         });
 
         pageDivs = pageDivs.map(el => [el, el.querySelector('div.hitCardStripe')]);
+        window.scrollTo(0, 0);
         preEntry();
       });
     }
@@ -847,11 +867,15 @@
 
 
   //utils
+  function sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
   function elementReady_(selector, baseEl = document.documentElement, waitFirst = false, checkIfAllChildrenAreAdded = false) {
     return new Promise((resolve, reject) => {
       let els = [...baseEl.querySelectorAll(selector)];
       if(els.length > 0 && !waitFirst) resolve(els[els.length-1]);
-      
+
       this.prevElNumber = els.length;
 
       new MutationObserver(async (mutationRecords, observer) => {
@@ -877,7 +901,7 @@
         subtree: true
       });
     });
-    
+
     function sleep_(ms) {
       return new Promise(r => setTimeout(r, ms));
     }
