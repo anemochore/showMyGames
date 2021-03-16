@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.12
+// @version      0.8.13
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -90,6 +90,9 @@
 //    now supports fanatical mystery bundle pages
 // ver 0.8.12 @ 2021-2-21
 //    fixed a bug on fanatical bundle pages
+//    temporarily stopped the parsing on fanatical main (and etc) pages
+// ver 0.8.13 @ 2021-2-21
+//    applied dom change on hb choice page
 
 
 (async () => {
@@ -322,7 +325,7 @@
         //bundle or subscription(hb choice) page
         pageDivs = [...document.querySelectorAll('div.dd-image-box, div.content-choice')]
         .filter(el => el.querySelector('i.hb-steam'));
-        titles = pageDivs.map(el => el.querySelector('span.front-page-art-image-text, span.content-choice-title').textContent.trim());
+        titles = pageDivs.map(el => el.querySelector('span.front-page-art-image-text, .content-choice-title').textContent.trim());
         pageDivs = pageDivs.map(el => [el, el.querySelector('div.dd-image-box-caption-container, div.title-and-delivery-methods')]);
 
         isAsync = true;
