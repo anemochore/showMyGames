@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.13
+// @version      0.8.14
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -93,6 +93,8 @@
 //    temporarily stopped the parsing on fanatical main (and etc) pages
 // ver 0.8.13 @ 2021-2-21
 //    applied dom change on hb choice page
+// ver 0.8.14 @ 2021-3-30
+//    fixed a bug on fanatical star deal page
 
 
 (async () => {
@@ -603,8 +605,8 @@
     //ignored package is not supported. idk if it's being used at all.
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
-    console.info('pageAppIds', pageAppIds);  //dev
-    console.info('pageDivs', pageDivs);  //dev
+    //console.info('pageAppIds', pageAppIds);  //dev
+    //console.info('pageDivs', pageDivs);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -716,7 +718,8 @@
         let tokens = links[0].replace(/\/$/, '').split('/');
         pageAppIds = [parseInt(tokens.pop())];
         if(tokens.pop() == 'sub') pageAppIds = ['sub' + pageAppIds[0]];
-        pageDivs = [document.querySelector('h1')];
+        pageDivs = [...document.querySelectorAll('h1')]
+        .filter(h1 => h1.offsetWidth > 0);
       }
 
       //'you may also like' 섹션은 다음 선택자로 main과 비슷하게 처리하면 되는데

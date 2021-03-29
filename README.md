@@ -94,3 +94,5 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    temporarily stopped the parsing on fanatical main (and etc) pages
     // ver 0.8.13 @ 2021-2-21
     //    applied dom change on hb choice page
+    // ver 0.8.14 @ 2021-3-30
+    //    fixed a bug on fanatical star deal page
