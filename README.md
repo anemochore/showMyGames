@@ -96,3 +96,8 @@ show owned steam games on major game sites. running on [tampermonkey](https://ww
     //    applied dom change on hb choice page
     // ver 0.8.14 @ 2021-3-30
     //    fixed a bug on fanatical star deal page
+    // ver 0.8.17 @ 2021-7-6
+    //    updated for 'bundles in bundle' case
+    //    applied dom change on fanatical main and app page
+    //    now force a little sleep to toast to fade out
+    //    forced menu appear on fanatical

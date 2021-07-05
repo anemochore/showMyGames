@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.14
+// @version      0.8.18
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -95,6 +95,11 @@
 //    applied dom change on hb choice page
 // ver 0.8.14 @ 2021-3-30
 //    fixed a bug on fanatical star deal page
+// ver 0.8.17 @ 2021-7-6
+//    updated for 'bundles in bundle' case
+//    applied dom change on fanatical main and app page
+//    now force a little sleep to toast to fade out
+//    forced menu appear on fanatical
 
 
 (async () => {
@@ -111,7 +116,9 @@
 
 
   //parsing current page
-  toast.log('analyzing current page...');
+  toast.log('page analyzing started...');
+  toast.log('');
+
   let isAsync = false;
   switch(document.location.host) {
     case "dailyindiegame.com":
@@ -287,15 +294,21 @@
       break;
     case "fanatical.com":
     case "www.fanatical.com":
-      await elementReady_('nav.navbar>div.w-100>div.nav-container');
-      syncMenu = new someMenu(document.querySelector('nav.navbar>div.w-100>div.nav-container'), {
+      const commonCardSel = 'div.card-container>div.hit-card>div.hitCard';
+      //await elementReady_('div.content>div', document.documentElement, true, true);
+      syncMenu = new someMenu(document.body, {
         display: 'flex',
         justifyContent: 'flex-end',
-        width: '100%'
+        width: '100%',
       }, {
-        marginTop: '-18px',
+        marginTop: '38px',
         height: '27px',
+        position: 'absolute',
+        top: 0,
+        zIndex: 2147483647,
       }, 'appendChild');
+
+      //console.log(document.querySelector('#someMenuContainer'));
 
       //games in nav bar
       //todo? pass+++
@@ -537,25 +550,29 @@
               const a = as[idx];
               const url = urls[idx];
               const type = url.split('/')[3];
-              const id   = url.split('/')[4];
+              let id   = url.split('/')[4];
               if(type == 'app') {
                 appIds[key] = parseInt(id);
                 idForTitleCache[key] = parseInt(id);
                 console.info('added <'+key+'> to title cache.');
               }
               else if(type == 'bundle') {
-                let items = JSON.parse(a.getAttribute('data-ds-bundle-data')).m_rgItems.map(el => el.m_rgIncludedAppIDs);
+                const rgItems = JSON.parse(a.getAttribute('data-ds-bundle-data')).m_rgItems;
+                let items = rgItems.map(el => el.m_rgIncludedAppIDs);
 
-                //assert every m_rgIncludedAppIDs's length == 1  //dev
-                if(items.every(item => item.length != 1)) {
-                  console.error("assertion failed. contact to dev: m_rgIncludedAppIDs's legnth is not 1 on", item);
-                  return;
-                }
-                items = items.map(item => parseInt(item[0]));
+                items.forEach((item, i) => {
+                  //bundles in bundle...
+                  //ex: https://store.steampowered.com/search/?sort_by=_ASC&term=Predator%3A+Hunting+Grounds+-+Predator+Bundle+Edition&ignore_preferences=1
+                  if(item.length > 1)
+                    items[i] = 'sub' + rgItems[i].m_nPackageID;
+                  else
+                    items[i] = parseInt(item[0]);
+                });
 
+                //번들은 배열로 저장함.
                 appIds[key] = items.slice();
                 idForTitleCache[key] = appIds[key];
-                console.info('added <'+key+'> to title cache.');  //번들은 풀어서 각각을 저장함.
+                console.info('added <'+key+'> to title cache.');  
               }
               else if(type == 'sub') {
                 //todo5: 패키지에 속한 애들이 위시리스트에 있는지는 따로 봐야 함.+++
@@ -605,8 +622,8 @@
     //ignored package is not supported. idk if it's being used at all.
 
     toast.log('now matching user games with '+pageAppIds.length+' games on the page...');
-    //console.info('pageAppIds', pageAppIds);  //dev
-    //console.info('pageDivs', pageDivs);  //dev
+    //console.debug('pageAppIds', pageAppIds);  //dev
+    //console.debug('pageDivs', pageDivs);  //dev
 
     let followedCount = 0, ownedCount = 0, wishedCount = 0, ignoredCount = 0;
     pageAppIds.forEach((idOrIds, idIndex) => {
@@ -616,6 +633,9 @@
       const divOrdivs = pageDivs[idIndex];
       let divs = divOrdivs;
       if(!Array.isArray(divOrdivs)) divs = [divOrdivs];
+
+      //console.debug('ids', ids);  //dev
+      //console.debug('divs', divs);  //dev
 
       if(styleModsString != '') {
         divs.forEach(div => {
@@ -708,25 +728,32 @@
     inverseBackground = false, styleModsString = '';
     titles = [], title = '';
 
+    const commonCardSel = 'div.card-container>div.hit-card>div.hitCard';
     if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'game' || document.location.pathname.split('/')[2] == 'dlc')) {
       //app page (including star deal page)
-      await elementReady_('div.game-details>dl.row div');
-      links = [...document.querySelectorAll('div.game-details>dl.row div a')]
-      .filter(el => el.host == "store.steampowered.com")
-      .map(el => el.href);
-      if(links.length > 0) {
-        let tokens = links[0].replace(/\/$/, '').split('/');
-        pageAppIds = [parseInt(tokens.pop())];
-        if(tokens.pop() == 'sub') pageAppIds = ['sub' + pageAppIds[0]];
-        pageDivs = [...document.querySelectorAll('h1')]
-        .filter(h1 => h1.offsetWidth > 0);
+
+      //await elementReady_('div.product-details-content');
+      await elementReady_(commonCardSel, document.documentElement, true, true);
+
+      if(document.querySelector('div.product-summary div.drm-container-steam')) {
+        pageDivs = [document.querySelector('h1.product-name')];
+        titles = [pageDivs[0].textContent.trim()];
       }
 
-      //'you may also like' 섹션은 다음 선택자로 main과 비슷하게 처리하면 되는데
-      //로딩을 기다려야 하며 페이지 이동까지 해야 해서 귀찮다. 패스.
-      //const commonCardSel = 'div:not([class$="-cloned"])>div>' + 'div.card-container>div[class]>div[class]';
+      let relDivs = [...document.querySelectorAll('div.recommendation-container div.slick-slide.slick-active')]
+      .filter(el => el.querySelector('div.drm-container-steam'));
 
-      preEntry();
+      pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('div.hitCardStripe')]));
+
+      //레이지 로딩이라 제목을 url에서 가져온다...
+      titles = titles.concat(relDivs.map(el => el.querySelector('a[class$="link"]').href.split('/').pop().replace(/-/g, ' ')));
+
+      searchSteam(titles, appIdsDict => {
+        titles.forEach((title, index) => {
+          pageAppIds[index] = appIdsDict[title];
+        });
+        preEntry();
+      });
     }
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
@@ -833,39 +860,23 @@
       });
     }
     else {
-      //main, on-sale, etc...
-      await elementReady_('div.container>div[class] img', document.querySelector('div.content'), true, true);
-      //console.log([...document.querySelector('div.content').querySelectorAll('div.container>div[class]')].map(el => el.className));  //dev
+      //main, on-sale, etc...      
+      await elementReady_(commonCardSel, document.documentElement, true, true);
 
-      const commonCardSel = 'div.card-container>div[class]>div[class]';
       pageDivs = [...document.querySelectorAll('div.content div.container>div[class] ' + commonCardSel)]
       .concat(    ...document.querySelectorAll('div.content div.container div.ais-Hits__root ' + commonCardSel))  //search
       .filter(el => el.querySelector('a[class$="link"]'))
       .filter(el => el.querySelector('a[class$="link"]').href.split('/')[4] == 'game' || el.querySelector('a[class$="link"]').href.split('/')[4] == 'dlc')
-      .filter(el => el.querySelector('div[class$="price-container"]>div.drm-container-steam') && el.querySelector('div[class$="price-container"] div.card-os-icons>span'));
-
-      //to load images
-      pageDivs.forEach(async (el, idx) => {
-        el.scrollIntoView();
-        //await sleep(2000);
-        //alert(idx);
-      });
-      window.scrollTo(0, 0);
-
-      titles = pageDivs.map(el => el.querySelector('img').alt || (el.querySelector('a') || (el.parentNode.querySelector('div.overlay-content-container a') && el.parentNode.querySelector('div.overlay-content-container a'))).innerText.trim());
-      //console.log(pageDivs);
-      //console.log(titles);
-
-      //v0.8.12
-      preEntry();  //todo: fix this T_T
+      .filter(el => el.querySelector('div[class$="price-container"]>div.drm-container-steam') && el.querySelector('div[class$="price-container"] div.card-os-icons>span'))
+      .map(el => [el, el.querySelector('div.hitCardStripe')]);
+      
+      //레이지 로딩이라 제목을 url에서 가져온다...
+      titles = pageDivs.map(el => el[0].querySelector('a[class$="link"]').href.split('/').pop().replace(/-/g, ' '));
 
       searchSteam(titles, appIdsDict => {
         titles.forEach((title, index) => {
           pageAppIds[index] = appIdsDict[title];
         });
-
-        pageDivs = pageDivs.map(el => [el, el.querySelector('div.hitCardStripe')]);
-        window.scrollTo(0, 0);
         preEntry();
       });
     }
@@ -883,16 +894,17 @@
       if(els.length > 0 && !waitFirst) resolve(els[els.length-1]);
 
       this.prevElNumber = els.length;
+      console.debug('this.prevElNumber', this.prevElNumber);
 
       new MutationObserver(async (mutationRecords, observer) => {
         let els = [...baseEl.querySelectorAll(selector)];
         if(els.length > 0) {
           if(!checkIfAllChildrenAreAdded) {
+            console.debug('resolved for checkIfAllChildrenAreAdded false', els);
             observer.disconnect();
             resolve(els[els.length-1]);
           }
-
-          if(els.length > this.prevElNumber) {
+          else if(els.length > this.prevElNumber) {
             this.prevElNumber = els.length;
             await sleep_(1000);  //dirty hack
             if([...baseEl.querySelectorAll(selector)].length == this.prevElNumber) {
@@ -1007,11 +1019,12 @@
     s.color = 'Black';
     s.backgroundColor = 'LawnGreen';
     s.overflow = 'auto';
-    s.zIndex = '2147483647';
+    s.zIndex = 2147483647;
 
-    this.log = (txt = '') => {
+    this.log = async (txt = '') => {
       txt = txt.trim();
       if(txt.length == 0) {
+        await sleep(1);
         this.div.style.transition = '2.5s';
         this.div.style.opacity = 0;
       }
