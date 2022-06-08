@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.18
+// @version      0.8.19
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -100,6 +100,8 @@
 //    applied dom change on fanatical main and app page
 //    now force a little sleep to toast to fade out
 //    forced menu appear on fanatical
+// ver 0.8.19 @ 2022-6-9
+//    hb: added hb choice pathname
 
 
 (async () => {
@@ -336,7 +338,7 @@
 
         //getInfo_() is not possible since pages are dynamically served
       }
-      else if(document.location.pathname == '/games' || document.location.pathname.startsWith('/games/') || document.location.pathname.startsWith('/subscription/')) {
+      else if(document.location.pathname == '/games' || document.location.pathname.startsWith('/games/') || document.location.pathname.startsWith('/subscription/') || document.location.pathname.startsWith('/membership')) {
         //bundle or subscription(hb choice) page
         pageDivs = [...document.querySelectorAll('div.dd-image-box, div.content-choice')]
         .filter(el => el.querySelector('i.hb-steam'));
