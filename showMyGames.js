@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         show my owned and wished games
 // @namespace    http://tampermonkey.net/
-// @version      0.8.19
+// @version      0.8.20
 // @updateURL    https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @downloadURL  https://raw.githubusercontent.com/anemochore/showMyGames/master/showMyGames.js
 // @description  try to take over the world!
@@ -102,6 +102,8 @@
 //    forced menu appear on fanatical
 // ver 0.8.19 @ 2022-6-9
 //    hb: added hb choice pathname
+// ver 0.8.20 @ 2023-12-13
+//    fixed fanatical bundle and app page
 
 
 (async () => {
@@ -240,7 +242,7 @@
               document.location.pathname == '/store' || document.location.pathname.startsWith('/store/') ||
               /*document.location.pathname == '/search' || */document.location.pathname.startsWith('/search/')) {
         //store or search (list)
-        //todo2: ÆäÀÌÁö ÀÌµ¿ ¾îÂ¿+++ domÀÌ º¯ÇÏÁö ¾Ê´Â´Ù???
+        //todo2: í˜ì´ì§€ ì´ë™ ì–´ì©”+++ domì´ ë³€í•˜ì§€ ì•ŠëŠ”ë‹¤???
 
         isAsync = true;
         $(document).ajaxStop(() => {
@@ -296,7 +298,7 @@
       break;
     case "fanatical.com":
     case "www.fanatical.com":
-      const commonCardSel = 'div.card-container>div.hit-card>div.hitCard';
+      //const commonCardSel = 'div.card-container>div.hit-card>div.hitCard';
       //await elementReady_('div.content>div', document.documentElement, true, true);
       syncMenu = new someMenu(document.body, {
         display: 'flex',
@@ -315,9 +317,9 @@
       //games in nav bar
       //todo? pass+++
 
-      window.onurlchange = fanaticalonMenuLoadingDone_;
+      window.onurlchange = fanaticalOnMenuLoadingDone_;
       isAsync = true;
-      fanaticalonMenuLoadingDone_();
+      fanaticalOnMenuLoadingDone_();
       break;
     case "humblebundle.com":
     case "www.humblebundle.com":
@@ -357,7 +359,7 @@
         document.location.pathname == '/store/search' || document.location.pathname.startsWith('/store/search/') ||
         document.location.pathname.startsWith('/store/promo/')) {
         //store main or search or promo page
-        //todo3: ÆäÀÌÁö ÀÌµ¿ ¾îÂ¿+++
+        //todo3: í˜ì´ì§€ ì´ë™ ì–´ì©”+++
         //todo: TRENDING DEALS in store page is not working+++
 
         await elementReady_('div.entity', document.querySelector('.entity-list.full-grid'));  //ajaxStop is not usable...
@@ -515,7 +517,7 @@
           preCallback_();
       }
       else {
-        //µÚ¿¡ 4 Pack °°Àº °Ô ºÙ´Â °æ¿ì ¶¼¾î³¿. ¹°·Ğ ¿¹¿Üµµ ÀÖÀ¸³ª ¸î °³ ¾øÀ¸´Ï ¹«½ÃÇÏ°ÚÀ½.
+        //ë’¤ì— 4 Pack ê°™ì€ ê²Œ ë¶™ëŠ” ê²½ìš° ë–¼ì–´ëƒ„. ë¬¼ë¡  ì˜ˆì™¸ë„ ìˆìœ¼ë‚˜ ëª‡ ê°œ ì—†ìœ¼ë‹ˆ ë¬´ì‹œí•˜ê² ìŒ.
         const oldTitle = title;
         const strToRemove = [' 4 Pack', ' 4-Pack', ' 2 Pack', ' 2-Pack'];
         for(str of strToRemove) {  //to use break
@@ -571,13 +573,13 @@
                     items[i] = parseInt(item[0]);
                 });
 
-                //¹øµéÀº ¹è¿­·Î ÀúÀåÇÔ.
+                //ë²ˆë“¤ì€ ë°°ì—´ë¡œ ì €ì¥í•¨.
                 appIds[key] = items.slice();
                 idForTitleCache[key] = appIds[key];
                 console.info('added <'+key+'> to title cache.');  
               }
               else if(type == 'sub') {
-                //todo5: ÆĞÅ°Áö¿¡ ¼ÓÇÑ ¾ÖµéÀÌ À§½Ã¸®½ºÆ®¿¡ ÀÖ´ÂÁö´Â µû·Î ºÁ¾ß ÇÔ.+++
+                //todo5: íŒ¨í‚¤ì§€ì— ì†í•œ ì• ë“¤ì´ ìœ„ì‹œë¦¬ìŠ¤íŠ¸ì— ìˆëŠ”ì§€ëŠ” ë”°ë¡œ ë´ì•¼ í•¨.+++
                 //let items = JSON.parse(a.getAttribute('data-ds-appid')).split(',').map(el => parseInt(el));
                 appIds[key] = 'sub' + id;
                 idForTitleCache[key] = appIds[key];
@@ -725,7 +727,7 @@
     });
   }
 
-  async function fanaticalonMenuLoadingDone_() {
+  async function fanaticalOnMenuLoadingDone_() {
     pageDivs = [], pageAppIds = [], links = [];
     inverseBackground = false, styleModsString = '';
     titles = [], title = '';
@@ -734,20 +736,22 @@
     if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'game' || document.location.pathname.split('/')[2] == 'dlc')) {
       //app page (including star deal page)
 
-      //await elementReady_('div.product-details-content');
-      await elementReady_(commonCardSel, document.documentElement, true, true);
+      //main title
+      const baseEl = await elementReady_('.product-page-top-content');
 
-      if(document.querySelector('div.product-summary div.drm-container-steam')) {
+      if(baseEl.querySelector('.drm-container-steam')) {
         pageDivs = [document.querySelector('h1.product-name')];
         titles = [pageDivs[0].textContent.trim()];
       }
+      console.debug('title', titles[0])
 
+      //not working as of 23-12-13
       let relDivs = [...document.querySelectorAll('div.recommendation-container div.slick-slide.slick-active')]
       .filter(el => el.querySelector('div.drm-container-steam'));
 
       pageDivs = pageDivs.concat(relDivs.map(el => [el, el.querySelector('div.hitCardStripe')]));
 
-      //·¹ÀÌÁö ·ÎµùÀÌ¶ó Á¦¸ñÀ» url¿¡¼­ °¡Á®¿Â´Ù...
+      //ë ˆì´ì§€ ë¡œë”©ì´ë¼ ì œëª©ì„ urlì—ì„œ ê°€ì ¸ì˜¨ë‹¤...
       titles = titles.concat(relDivs.map(el => el.querySelector('a[class$="link"]').href.split('/').pop().replace(/-/g, ' ')));
 
       searchSteam(titles, appIdsDict => {
@@ -759,11 +763,14 @@
     }
     else if(document.location.pathname.split('/').length > 3 && (document.location.pathname.split('/')[2] == 'bundle' || document.location.pathname.includes('bundle') || document.location.pathname.includes('mix'))) {
       //bundle page
-      await elementReady_('div.container .bundle-game-card, div.container .mystery-game', document.querySelector('div.content'), true);
+      const baseEl = await elementReady_('div.content', undefined, {waitFirst: true});
+      console.debug(baseEl);
+      pageDivs = await elementReady_('.bundle-game-card, .mystery-game', undefined, {returnAll: true});
+      console.debug(pageDivs);
 
       if(!document.querySelector('div.product-trust>div.card-body span')) {
         //mix bundle, etc.
-        pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div[class^="bundle"], div[class*="-column-row"]>a>button[class^="bundle"]')];
+        //pageDivs = [...document.querySelectorAll('div[class*="-column-row"]>div[class^="bundle"], div[class*="-column-row"]>a>button[class^="bundle"]')];
 
         if(pageDivs.length > 0) {
           let [start, end] = document.querySelector('div.carousel-buttons-container>div.carousel-count').innerText.split(' of ')
@@ -782,7 +789,7 @@
               if('scrollRestoration' in history) history.scrollRestoration = 'manual';
               window.scrollTo(0, 0);
 
-              //detail¿¡¼­ ½ºÆÀ ¸µÅ©°¡ ¾ø´Â °æ¿ì°¡ ÀÖ¾î¼­... pageDivs¿¡¼­ filterÇÏÁö ¾Ê°í ¿©±â¼­ Ã³¸®ÇÔ.
+              //detailì—ì„œ ìŠ¤íŒ€ ë§í¬ê°€ ì—†ëŠ” ê²½ìš°ê°€ ìˆì–´ì„œ... pageDivsì—ì„œ filterí•˜ì§€ ì•Šê³  ì—¬ê¸°ì„œ ì²˜ë¦¬í•¨.
               links.forEach((el, idx) => {
                 if(!el) {
                   pageAppIds[idx] = null;
@@ -863,7 +870,7 @@
     }
     else {
       //main, on-sale, etc...      
-      await elementReady_(commonCardSel, document.documentElement, true, true);
+      await elementReady_(commonCardSel, document.documentElement, {waitFirst: true, checkIfAllChildrenAreAdded: true});
 
       pageDivs = [...document.querySelectorAll('div.content div.container>div[class] ' + commonCardSel)]
       .concat(    ...document.querySelectorAll('div.content div.container div.ais-Hits__root ' + commonCardSel))  //search
@@ -872,7 +879,7 @@
       .filter(el => el.querySelector('div[class$="price-container"]>div.drm-container-steam') && el.querySelector('div[class$="price-container"] div.card-os-icons>span'))
       .map(el => [el, el.querySelector('div.hitCardStripe')]);
       
-      //·¹ÀÌÁö ·ÎµùÀÌ¶ó Á¦¸ñÀ» url¿¡¼­ °¡Á®¿Â´Ù...
+      //ë ˆì´ì§€ ë¡œë”©ì´ë¼ ì œëª©ì„ urlì—ì„œ ê°€ì ¸ì˜¨ë‹¤...
       titles = pageDivs.map(el => el[0].querySelector('a[class$="link"]').href.split('/').pop().replace(/-/g, ' '));
 
       searchSteam(titles, appIdsDict => {
@@ -890,28 +897,34 @@
     return new Promise(r => setTimeout(r, ms));
   }
 
-  function elementReady_(selector, baseEl = document.documentElement, waitFirst = false, checkIfAllChildrenAreAdded = false) {
+  function elementReady_(selector, baseEl = document.documentElement, options = {}) {
     return new Promise((resolve, reject) => {
       let els = [...baseEl.querySelectorAll(selector)];
-      if(els.length > 0 && !waitFirst) resolve(els[els.length-1]);
+      if(els.length > 0 && !options.waitFirst) {
+        if(options.returnAll) resolve(els);
+        else resolve(els[els.length-1]);
+      }
 
       this.prevElNumber = els.length;
-      console.debug('this.prevElNumber', this.prevElNumber);
+      //console.debug('this.prevElNumber, els.length', this.prevElNumber, els.length);
 
       new MutationObserver(async (mutationRecords, observer) => {
         let els = [...baseEl.querySelectorAll(selector)];
         if(els.length > 0) {
-          if(!checkIfAllChildrenAreAdded) {
-            console.debug('resolved for checkIfAllChildrenAreAdded false', els);
+          if(!options.checkIfAllChildrenAreAdded) {
+            //console.debug('resolved for checkIfAllChildrenAreAdded false', els);
             observer.disconnect();
-            resolve(els[els.length-1]);
+            if(options.returnAll) resolve(els);
+            else resolve(els[els.length-1]);
           }
           else if(els.length > this.prevElNumber) {
             this.prevElNumber = els.length;
-            await sleep_(1000);  //dirty hack
+            await sleep(1000);  //dirty hack
             if([...baseEl.querySelectorAll(selector)].length == this.prevElNumber) {
+              //console.debug('resolved for checkIfAllChildrenAreAdded true', els);
               observer.disconnect();
-              resolve(els[els.length-1]);
+              if(options.returnAll) resolve(els);
+              else resolve(els[els.length-1]);
             }
           }
         }
@@ -921,10 +934,6 @@
         subtree: true
       });
     });
-
-    function sleep_(ms) {
-      return new Promise(r => setTimeout(r, ms));
-    }
   }
 
 
